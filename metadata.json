@@ -1,0 +1,7 @@
+{
+  "name": "Supermarket Product Checker",
+  "description": "A mobile-first PWA for supermarket staff to scan, review, edit, and create product information directly on their phones.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
