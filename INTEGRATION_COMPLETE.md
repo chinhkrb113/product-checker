@@ -52,7 +52,7 @@ npm run dev
 
 ## 🌐 URLs
 
-- **Frontend**: http://localhost:5173
+- **Frontend**: http://localhost:3000
 - **API Server**: http://localhost:3001
 - **Health Check**: http://localhost:3001/health
 - **Test API**: http://localhost:3001/api/products
