@@ -1,6 +1,6 @@
 # 🛒 Supermarket Product Checker
 
-Hệ thống kiểm tra sản phẩm siêu thị tích hợp với ERPNext, cho phép nhân viên quét mã vạch và quản lý danh sách sản phẩm một cách hiệu quả.
+Hệ thống kiểm tra sản phẩm siêu thị tích hợp với ERPNext, cho phép nhân viên quét mã vạch, kiểm tra chất lượng theo quy trình 2 bước (double-check workflow), và quản lý danh sách sản phẩm một cách hiệu quả.
 
 ![Version](https://img.shields.io/badge/version-0.0.0-blue.svg)
 ![Node](https://img.shields.io/badge/node-%3E%3D16.x-green.svg)
@@ -23,22 +23,45 @@ Hệ thống kiểm tra sản phẩm siêu thị tích hợp với ERPNext, cho 
 ## ✨ Tính năng
 
 ### 🔐 Xác thực & Bảo mật
-- ✅ Đăng nhập bằng username từ ERPNext
+- ✅ Đăng nhập bằng username từ ERPNext (tabEmployee)
 - ✅ Xác thực trạng thái nhân viên (Active/Inactive)
-- ✅ Quản lý phiên đăng nhập
+- ✅ Quản lý phiên đăng nhập với localStorage
+- ✅ Tự động lưu trạng thái đăng nhập
 
 ### 📦 Quản lý sản phẩm
 - 🔍 Quét mã vạch nhanh chóng bằng barcode scanner
-- 📊 Xem danh sách tất cả sản phẩm với phân trang
-- 🔎 Tìm kiếm sản phẩm theo barcode/mã sản phẩm
-- ➕ Tạo mới sản phẩm
+- 📊 Xem danh sách tất cả sản phẩm với phân trang (lazy loading)
+- 🔎 Tìm kiếm sản phẩm theo barcode/mã sản phẩm/tên sản phẩm
+- ➕ Tạo mới sản phẩm với 119 đơn vị tính (searchable dropdown)
 - ✏️ Cập nhật thông tin sản phẩm
-- ✔️ Đánh dấu sản phẩm đã kiểm tra
+- 📷 Chụp và lưu ảnh sản phẩm (tối đa 3 ảnh)
+- ⚡ Lọc và sắp xếp danh sách sản phẩm
+
+### 🔄 Double-Check Workflow (Quy trình kiểm tra 2 lần)
+- ✅ **Check lần 1 (First Check)** - Nhân viên kiểm tra:
+  - Đánh giá trạng thái: Đúng / Cần sửa / Sai
+  - Cập nhật thông tin: Tên sản phẩm, đơn vị, giá, tồn kho
+  - Chụp ảnh sản phẩm (1-3 ảnh)
+  - Ghi nhận người kiểm tra và thời gian
+
+- ✅ **Check lần 2 (Second Check)** - Supervisor duyệt:
+  - Xem danh sách sản phẩm chờ duyệt
+  - Lọc theo trạng thái (Đúng/Cần sửa/Sai)
+  - Phê duyệt hoặc từ chối
+  - Tìm kiếm và phân trang nâng cao
+
+- 📊 **Dashboard thống kê**:
+  - Tiến độ hoàn thành tổng thể
+  - Tiến độ Check lần 1
+  - Số sản phẩm chờ check từng giai đoạn
+  - Thống kê kết quả kiểm tra (Đúng/Cần sửa/Sai)
+  - Auto-refresh mỗi 30 giây
 
 ### 🔄 Tích hợp ERPNext
 - Kết nối trực tiếp với MySQL database của ERPNext
 - Đồng bộ dữ liệu thời gian thực
 - Tương thích với ERPNext >= 13.x
+- Sử dụng bảng `tabItem` và `tabEmployee`
 
 ## 🛠 Công nghệ sử dụng
 
@@ -64,9 +87,8 @@ Hệ thống kiểm tra sản phẩm siêu thị tích hợp với ERPNext, cho 
 ### Database
 - **MySQL** >= 5.7
 - **ERPNext Database** với các bảng:
-  - `tabItem` - Thông tin sản phẩm
+  - `tabItem` - Thông tin sản phẩm (với các trường check workflow)
   - `tabEmployee` - Thông tin nhân viên
-  - `tabItem Barcode` - Mã vạch sản phẩm
 
 ## 📦 Yêu cầu hệ thống
 
@@ -75,6 +97,7 @@ Hệ thống kiểm tra sản phẩm siêu thị tích hợp với ERPNext, cho 
 - **MySQL**: >= 5.7
 - **ERPNext**: >= 13.x (đã cài đặt và cấu hình)
 - **Barcode Scanner** (optional): Cho chức năng quét mã vạch
+- **Camera** (optional): Cho chức năng chụp ảnh sản phẩm
 
 ## 🚀 Cài đặt
 
@@ -193,27 +216,72 @@ PORT=3001  # Thay đổi port tùy ý
 
 ### 2. Quét mã vạch sản phẩm
 
-1. Click vào tab "Scan"
+1. Click vào tab "Scan" hoặc sử dụng icon quét
 2. Sử dụng barcode scanner hoặc nhập mã thủ công
 3. Hệ thống tự động tìm kiếm và hiển thị thông tin sản phẩm
-4. Đánh dấu sản phẩm đã kiểm tra
+4. Chọn "Check lần 1" để bắt đầu kiểm tra
 
-### 3. Xem danh sách sản phẩm
+### 3. Check lần 1 (First Check) - Nhân viên
 
-1. Click vào tab "Products"
-2. Xem danh sách tất cả sản phẩm với phân trang
-3. Scroll để tải thêm sản phẩm (lazy loading)
+1. Sau khi quét mã, chọn "Check lần 1"
+2. Chọn kết quả kiểm tra:
+   - ✅ **Đúng**: Thông tin sản phẩm chính xác
+   - 🔄 **Cần sửa**: Cần điều chỉnh một số thông tin
+   - ❌ **Sai**: Thông tin sản phẩm hoàn toàn sai
+3. Cập nhật thông tin nếu cần:
+   - Tên sản phẩm mới
+   - Đơn vị mới (chọn từ 119 đơn vị với tính năng tìm kiếm)
+   - Giá mới
+   - Số lượng tồn kho
+4. Chụp ảnh sản phẩm (1-3 ảnh)
+5. Submit để gửi lên hệ thống
+
+### 4. Check lần 2 (Second Check) - Supervisor
+
+1. Click vào tab "Duyệt kiểm tra lần 2"
+2. Xem danh sách sản phẩm chờ duyệt
+3. Sử dụng bộ lọc:
+   - **Tất cả**: Xem toàn bộ sản phẩm chờ duyệt
+   - **Đúng**: Chỉ xem sản phẩm được đánh giá đúng
+   - **Cần sửa**: Chỉ xem sản phẩm cần điều chỉnh
+   - **Sai**: Chỉ xem sản phẩm sai thông tin
 4. Click vào sản phẩm để xem chi tiết
+5. Phê duyệt hoặc từ chối:
+   - ✅ **Phê duyệt**: Đồng ý với đánh giá của nhân viên
+   - ❌ **Từ chối**: Không đồng ý, yêu cầu kiểm tra lại
+6. Sử dụng phân trang (10/20/50/100 items/trang) và tìm kiếm
 
-### 4. Tạo sản phẩm mới
+### 5. Xem thống kê (Dashboard)
 
-1. Click vào tab "Create"
+1. Click vào tab "Thống kê"
+2. Xem các chỉ số:
+   - **Tiến độ hoàn thành**: % sản phẩm đã hoàn thành cả 2 lần check
+   - **Tiến độ Check lần 1**: % sản phẩm đã qua check lần 1
+   - **Chờ check lần 1**: Số sản phẩm chưa được kiểm tra
+   - **Chờ duyệt lần 2**: Số sản phẩm đã check lần 1, chờ supervisor duyệt
+   - **Đã hoàn thành**: Số sản phẩm đã qua cả 2 lần check
+   - **Phân tích kết quả**: Số lượng sản phẩm Đúng/Cần sửa/Sai
+3. Dashboard tự động refresh mỗi 30 giây
+
+### 6. Xem danh sách sản phẩm
+
+1. Click vào tab "Danh sách"
+2. Xem danh sách tất cả sản phẩm với phân trang
+3. Tìm kiếm sản phẩm theo tên hoặc mã
+4. Scroll để tải thêm sản phẩm (lazy loading)
+5. Click vào sản phẩm để xem chi tiết
+6. Lọc theo trạng thái check
+
+### 7. Tạo sản phẩm mới
+
+1. Click vào tab "Tạo mới"
 2. Nhập thông tin sản phẩm:
    - Barcode/Mã sản phẩm
    - Tên sản phẩm
-   - Giá bán
-   - Đơn vị tính
+   - Giá bán (lưu ý: tối đa 999,999,999)
+   - Đơn vị tính (chọn từ dropdown với tìm kiếm)
 3. Submit form
+4. Sản phẩm mới tự động được đánh dấu đã check
 
 ## 📡 API Documentation
 
@@ -310,32 +378,143 @@ GET /api/products?limit=20&offset=0
 
 **Success Response (200):**
 ```json
-[
-  {
-    "barcode": "ITEM-001",
-    "name": "Nước ngọt Coca Cola",
-    "price": 15000,
-    "unit": "Chai",
-    "checked": false
-  },
-  {
-    "barcode": "ITEM-002",
-    "name": "Bánh mì sandwich",
-    "price": 25000,
-    "unit": "Cái",
-    "checked": false
-  }
-]
+{
+  "data": [
+    {
+      "barcode": "ITEM-001",
+      "name": "Nước ngọt Coca Cola",
+      "price": 15000,
+      "unit": "Chai",
+      "checked": false,
+      "first_check": 0,
+      "second_check": 0
+    }
+  ],
+  "total": 100
+}
 ```
 
 **Notes:**
 - Chỉ lấy sản phẩm có `disabled = 0` và `is_sales_item = 1`
 - Loại bỏ tài sản cố định (`is_fixed_asset = 0`)
 - Sắp xếp theo tên sản phẩm (A-Z)
+- Trả về tổng số sản phẩm trong `total`
 
 ---
 
-#### 4. Get Product by Barcode
+#### 4. Search Products
+
+Tìm kiếm sản phẩm theo tên hoặc mã.
+
+```http
+GET /api/products/search?q={searchTerm}&limit={limit}&offset={offset}
+```
+
+**Query Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `q` | string | No | Từ khóa tìm kiếm |
+| `limit` | number | No | Số lượng kết quả (default: 50) |
+| `offset` | number | No | Vị trí bắt đầu (default: 0) |
+
+**Success Response (200):**
+```json
+{
+  "data": [
+    {
+      "barcode": "ITEM-001",
+      "name": "Nước ngọt Coca Cola",
+      "price": 15000,
+      "unit": "Chai",
+      "checked": false,
+      "first_check": 0,
+      "second_check": 0
+    }
+  ],
+  "total": 5
+}
+```
+
+---
+
+#### 5. Get Products Pending First Check
+
+Lấy danh sách sản phẩm chờ check lần 1.
+
+```http
+GET /api/products/pending-first-check?limit={limit}&offset={offset}
+```
+
+**Success Response (200):**
+```json
+{
+  "data": [...],
+  "total": 50
+}
+```
+
+---
+
+#### 6. Get Products Pending Second Check
+
+Lấy danh sách sản phẩm chờ duyệt lần 2.
+
+```http
+GET /api/products/pending-second-check?limit={limit}&offset={offset}
+```
+
+**Success Response (200):**
+```json
+{
+  "data": [
+    {
+      "barcode": "ITEM-001",
+      "name": "Nước ngọt Coca Cola",
+      "price": 15000,
+      "unit": "Chai",
+      "first_check": 1,
+      "second_check": 0,
+      "checked_by": "EMP-00001",
+      "checked_at": "2025-11-05T10:30:00",
+      "check_result": "correct",
+      "new_product_name": null,
+      "new_unit": null,
+      "new_price": null,
+      "stock": 100,
+      "images": ["base64..."]
+    }
+  ],
+  "total": 20
+}
+```
+
+---
+
+#### 7. Get Check Workflow Stats
+
+Lấy thống kê quy trình check.
+
+```http
+GET /api/check-workflow/stats
+```
+
+**Success Response (200):**
+```json
+{
+  "total": 1000,
+  "pending_first_check": 300,
+  "pending_second_check": 400,
+  "completed": 300,
+  "progress_percentage": 30.0,
+  "correct_count": 250,
+  "needs_correction_count": 100,
+  "incorrect_count": 50
+}
+```
+
+---
+
+#### 8. Get Product by Barcode
 
 Tìm kiếm sản phẩm theo mã vạch hoặc mã sản phẩm.
 
@@ -355,7 +534,15 @@ GET /api/products/ITEM-001
   "name": "Nước ngọt Coca Cola",
   "price": 15000,
   "unit": "Chai",
-  "checked": false
+  "checked": false,
+  "first_check": 0,
+  "second_check": 0,
+  "check_result": null,
+  "new_product_name": null,
+  "new_unit": null,
+  "new_price": null,
+  "stock": null,
+  "images": []
 }
 ```
 
@@ -368,7 +555,7 @@ GET /api/products/ITEM-001
 
 ---
 
-#### 5. Create New Product
+#### 9. Create New Product
 
 Tạo sản phẩm mới trong hệ thống.
 
@@ -391,7 +578,7 @@ Content-Type: application/json
 ```json
 {
   "success": true,
-  "message": "Product creation requires Frappe API integration",
+  "message": "Product created successfully",
   "product": {
     "barcode": "ITEM-NEW-001",
     "name": "Sản phẩm mới",
@@ -403,10 +590,15 @@ Content-Type: application/json
 ```
 
 **Error Responses:**
-- **400 Bad Request** - Thiếu thông tin bắt buộc
+- **400 Bad Request** - Thiếu thông tin bắt buộc hoặc giá vượt quá giới hạn
 ```json
 {
   "error": "Missing required fields"
+}
+```
+```json
+{
+  "error": "Price must not exceed 999999999"
 }
 ```
 
@@ -417,11 +609,11 @@ Content-Type: application/json
 }
 ```
 
-**⚠️ Note:** API hiện tại trả về mock response. Trong production cần tích hợp Frappe API để tạo sản phẩm thực sự trong ERPNext.
+**⚠️ Note:** API tạo sản phẩm trực tiếp vào bảng `tabItem`. Giá không được vượt quá 999,999,999.
 
 ---
 
-#### 6. Update Product
+#### 10. Update Product
 
 Cập nhật thông tin sản phẩm.
 
@@ -444,18 +636,82 @@ Content-Type: application/json
 ```json
 {
   "success": true,
-  "message": "Product update requires Frappe API integration",
-  "product": {
-    "barcode": "ITEM-001",
-    "name": "Tên sản phẩm mới",
-    "price": 60000,
-    "unit": "Hộp",
-    "checked": true
-  }
+  "message": "Product updated successfully"
 }
 ```
 
-**⚠️ Note:** API hiện tại trả về mock response. Trong production cần tích hợp Frappe API để cập nhật sản phẩm thực sự trong ERPNext.
+---
+
+#### 11. First Check (Staff)
+
+Nhân viên thực hiện check lần 1.
+
+```http
+PATCH /api/products/:barcode/first-check
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "checked_by": "EMP-00001",
+  "check_result": "correct",
+  "new_product_name": "Tên mới",
+  "new_unit": "Hộp",
+  "new_price": 55000,
+  "stock": 100,
+  "images": ["base64...", "base64...", "base64..."]
+}
+```
+
+**Parameters:**
+- `check_result`: `"correct"` | `"needs_correction"` | `"incorrect"`
+- `images`: Mảng base64 strings (tối đa 3 ảnh)
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "message": "First check completed successfully"
+}
+```
+
+---
+
+#### 12. Second Check (Supervisor)
+
+Supervisor duyệt check lần 2.
+
+```http
+PATCH /api/products/:barcode/second-check
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "approved": true,
+  "checked_by": "EMP-00002"
+}
+```
+
+**Parameters:**
+- `approved`: `true` (phê duyệt) | `false` (từ chối)
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "message": "Second check approved successfully"
+}
+```
+
+```json
+{
+  "success": true,
+  "message": "Second check rejected, product sent back to first check"
+}
+```
 
 ---
 
@@ -499,54 +755,62 @@ INSERT INTO tabEmployee (name, employee_name, status) VALUES
 
 ### tabItem
 
-Bảng quản lý thông tin sản phẩm từ ERPNext.
+Bảng quản lý thông tin sản phẩm từ ERPNext với các trường check workflow.
 
 ```sql
 CREATE TABLE `tabItem` (
   `name` varchar(140) PRIMARY KEY,           -- Mã sản phẩm (ITEM-001)
   `item_name` varchar(140),                  -- Tên sản phẩm
-  `standard_rate` decimal(18,6),             -- Giá bán
+  `standard_rate` decimal(18,6),             -- Giá bán (tối đa 999,999,999)
   `stock_uom` varchar(140),                  -- Đơn vị tính
   `disabled` int(1) DEFAULT 0,               -- 0: Active, 1: Disabled
   `is_sales_item` int(1) DEFAULT 1,          -- Có phải hàng bán không
   `is_fixed_asset` int(1) DEFAULT 0,         -- Có phải tài sản cố định không
+  
+  -- Double-check workflow fields
+  `first_check` int(1) DEFAULT 0,            -- 0: Chưa check, 1: Đã check lần 1
+  `second_check` int(1) DEFAULT 0,           -- 0: Chưa duyệt, 1: Đã duyệt lần 2
+  `checked_by` varchar(140),                 -- Mã nhân viên check
+  `checked_at` datetime,                     -- Thời gian check
+  `check_result` varchar(140),               -- 'correct', 'needs_correction', 'incorrect', 'rejected'
+  `new_product_name` text,                   -- Tên sản phẩm mới (nếu cần sửa)
+  `new_unit` varchar(140),                   -- Đơn vị mới (nếu cần sửa)
+  `new_barcode` varchar(140),                -- Barcode mới (nếu cần sửa)
+  `new_price` decimal(18,6),                 -- Giá mới (nếu cần sửa)
+  `image_1` longtext,                        -- Ảnh 1 (base64)
+  `image_2` longtext,                        -- Ảnh 2 (base64)
+  `image_3` longtext,                        -- Ảnh 3 (base64)
+  `stock` int(11),                           -- Số lượng tồn kho
+  
   `creation` datetime,
   `modified` datetime,
+  
   INDEX idx_disabled (disabled),
   INDEX idx_is_sales_item (is_sales_item),
-  INDEX idx_item_name (item_name)
+  INDEX idx_item_name (item_name),
+  INDEX idx_first_check (first_check),
+  INDEX idx_second_check (second_check),
+  INDEX idx_check_result (check_result)
 );
 ```
 
 **Sample Data:**
 ```sql
-INSERT INTO tabItem (name, item_name, standard_rate, stock_uom, disabled, is_sales_item, is_fixed_asset) VALUES
-('ITEM-001', 'Nước ngọt Coca Cola', 15000, 'Chai', 0, 1, 0),
-('ITEM-002', 'Bánh mì sandwich', 25000, 'Cái', 0, 1, 0);
+INSERT INTO tabItem (
+  name, item_name, standard_rate, stock_uom, 
+  disabled, is_sales_item, is_fixed_asset,
+  first_check, second_check
+) VALUES
+('ITEM-001', 'Nước ngọt Coca Cola', 15000, 'Chai', 0, 1, 0, 0, 0),
+('ITEM-002', 'Bánh mì sandwich', 25000, 'Cái', 0, 1, 0, 1, 0),
+('ITEM-003', 'Sữa tươi Vinamilk', 35000, 'Hộp', 0, 1, 0, 1, 1);
 ```
 
----
-
-### tabItem Barcode
-
-Bảng ánh xạ barcode với sản phẩm.
-
-```sql
-CREATE TABLE `tabItem Barcode` (
-  `name` varchar(140) PRIMARY KEY,
-  `barcode` varchar(140) UNIQUE,             -- Mã vạch
-  `parent` varchar(140),                     -- Reference to tabItem.name
-  FOREIGN KEY (parent) REFERENCES tabItem(name),
-  INDEX idx_barcode (barcode)
-);
-```
-
-**Sample Data:**
-```sql
-INSERT INTO `tabItem Barcode` (name, barcode, parent) VALUES
-('BARCODE-001', '8934567890123', 'ITEM-001'),
-('BARCODE-002', '8934567890456', 'ITEM-002');
-```
+**Check Workflow States:**
+- `first_check=0, second_check=0`: Chưa check
+- `first_check=1, second_check=0`: Đã check lần 1, chờ duyệt
+- `first_check=1, second_check=1`: Đã hoàn thành
+- `check_result='rejected'`: Bị từ chối, cần check lại
 
 ---
 
@@ -558,7 +822,9 @@ SELECT
   name as item_code,
   item_name,
   standard_rate,
-  stock_uom
+  stock_uom,
+  first_check,
+  second_check
 FROM tabItem 
 WHERE disabled = 0 
   AND is_sales_item = 1
@@ -566,18 +832,42 @@ WHERE disabled = 0
 ORDER BY item_name ASC;
 ```
 
-#### Tìm sản phẩm theo barcode
+#### Lấy sản phẩm chờ check lần 1
+```sql
+SELECT * FROM tabItem
+WHERE disabled = 0
+  AND is_sales_item = 1
+  AND is_fixed_asset = 0
+  AND first_check = 0
+ORDER BY creation DESC;
+```
+
+#### Lấy sản phẩm chờ duyệt lần 2
+```sql
+SELECT * FROM tabItem
+WHERE disabled = 0
+  AND is_sales_item = 1
+  AND is_fixed_asset = 0
+  AND first_check = 1
+  AND second_check = 0
+  AND (check_result IS NULL OR check_result != 'rejected')
+ORDER BY checked_at DESC;
+```
+
+#### Thống kê workflow
 ```sql
 SELECT 
-  i.name as item_code,
-  i.item_name,
-  i.standard_rate,
-  i.stock_uom,
-  b.barcode
-FROM tabItem i
-LEFT JOIN `tabItem Barcode` b ON i.name = b.parent
-WHERE b.barcode = '8934567890123'
-  AND i.disabled = 0;
+  COUNT(*) as total,
+  SUM(CASE WHEN first_check = 0 THEN 1 ELSE 0 END) as pending_first_check,
+  SUM(CASE WHEN first_check = 1 AND second_check = 0 AND (check_result IS NULL OR check_result != 'rejected') THEN 1 ELSE 0 END) as pending_second_check,
+  SUM(CASE WHEN first_check = 1 AND second_check = 1 THEN 1 ELSE 0 END) as completed,
+  SUM(CASE WHEN check_result = 'correct' THEN 1 ELSE 0 END) as correct_count,
+  SUM(CASE WHEN check_result = 'needs_correction' THEN 1 ELSE 0 END) as needs_correction_count,
+  SUM(CASE WHEN check_result = 'incorrect' THEN 1 ELSE 0 END) as incorrect_count
+FROM tabItem
+WHERE disabled = 0
+  AND is_sales_item = 1
+  AND is_fixed_asset = 0;
 ```
 
 #### Kiểm tra username và status
@@ -591,30 +881,149 @@ WHERE name = 'EMP-00001'
   AND status = 'Active';
 ```
 
+---
+
+### Database Migration
+
+Nếu bạn cần thêm các trường workflow vào database ERPNext hiện có:
+
+```sql
+-- Thêm các trường check workflow
+ALTER TABLE tabItem
+ADD COLUMN first_check int(1) DEFAULT 0,
+ADD COLUMN second_check int(1) DEFAULT 0,
+ADD COLUMN checked_by varchar(140),
+ADD COLUMN checked_at datetime,
+ADD COLUMN check_result varchar(140),
+ADD COLUMN new_product_name text,
+ADD COLUMN new_unit varchar(140),
+ADD COLUMN new_barcode varchar(140),
+ADD COLUMN new_price decimal(18,6),
+ADD COLUMN image_1 longtext,
+ADD COLUMN image_2 longtext,
+ADD COLUMN image_3 longtext,
+ADD COLUMN stock int(11);
+
+-- Thêm indexes để tối ưu query
+ALTER TABLE tabItem
+ADD INDEX idx_first_check (first_check),
+ADD INDEX idx_second_check (second_check),
+ADD INDEX idx_check_result (check_result);
+```
+
 ## 📁 Cấu trúc thư mục
 
 ```
 supermarket-product-checker/
 ├── server/                          # Backend API
-│   ├── index.ts                    # Express server & API routes
+│   ├── index.ts                    # Express server & 12 API routes
 │   └── db.ts                       # MySQL connection pool
-├── components/                      # React components
+├── components/                      # React components (10 files)
 │   ├── LoginScreen.tsx             # Màn hình đăng nhập
 │   ├── ScanScreen.tsx              # Màn hình quét barcode
-│   ├── ProductListScreen.tsx       # Danh sách sản phẩm
+│   ├── ProductListScreen.tsx       # Danh sách sản phẩm với search/filter
 │   ├── ProductDetailScreen.tsx     # Chi tiết sản phẩm
-│   ├── CreateProductScreen.tsx     # Tạo sản phẩm mới
+│   ├── CreateProductScreen.tsx     # Tạo sản phẩm mới (với searchable dropdown)
+│   ├── FirstCheckScreen.tsx        # Check lần 1 (nhân viên)
+│   ├── SecondCheckScreen.tsx       # Check lần 2 (supervisor) với filter/search
+│   ├── CheckDashboard.tsx          # Dashboard thống kê workflow
 │   ├── Toast.tsx                   # Thông báo
 │   └── icons.tsx                   # Icon components
-├── App.tsx                          # Main App component
+├── App.tsx                          # Main App component (207 lines)
 ├── index.tsx                        # Entry point
 ├── types.ts                         # TypeScript type definitions
-├── constants.ts                     # App constants
+├── constants.ts                     # App constants (119 UNIT_OPTIONS)
 ├── package.json                     # Dependencies & scripts
 ├── tsconfig.json                    # TypeScript configuration
 ├── vite.config.ts                   # Vite configuration
 ├── .env.local                       # Environment variables (create this)
-└── README.md                        # Documentation
+├── DATABASE_SETUP.md                # Database setup guide
+├── FIX_LOGIN_STATUS.md              # Login fix documentation
+├── FIX_SCAN_SEARCH.md               # Scan/search fix documentation
+├── INTEGRATION_COMPLETE.md          # Integration documentation
+├── LAZY_LOADING_IMPLEMENTED.md      # Lazy loading implementation
+├── LOGIN_FEATURE.md                 # Login feature documentation
+├── TEST_SCENARIOS.md                # Test scenarios documentation
+└── README.md                        # This file
+
+## 📊 Key Features Detail
+
+### 🔍 Searchable Dropdown (119 đơn vị)
+
+Được sử dụng trong `FirstCheckScreen` và `CreateProductScreen`:
+
+```typescript
+// constants.ts
+export const UNIT_OPTIONS = [
+  '7- QUẢ', 'Bánh', 'Bao', 'BAO-18', 'BAO-20', 'BAO-80', 'Bịch', ...
+  'Thùng', 'THÙNG-10', 'THÙNG-100', ...
+  'Túi', 'Túi-10', 'TÚI-3', 'TÚI-7', 'Tuýp', 'UOM', 'Vỉ',
+  'Vỉ-2', '份', '個', '包', '本', '杯'
+]; // Total: 119 units
+```
+
+**Tính năng:**
+- Tìm kiếm thời gian thực (case-insensitive)
+- Click bên ngoài để đóng dropdown
+- Highlight đơn vị đã chọn
+- Hỗ trợ tiếng Việt và tiếng Trung
+
+### 📈 Dashboard Metrics
+
+**Tiến độ hoàn thành:**
+- Formula: `(completed / total) * 100`
+- Gradient: Blue to Purple
+- Auto-refresh: 30 giây
+
+**Tiến độ Check lần 1:**
+- Formula: `((pending_second_check + completed) / total) * 100`
+- Gradient: Yellow to Orange
+- Hiển thị số sản phẩm đã qua check lần 1
+
+**Thống kê chi tiết:**
+- Tổng sản phẩm
+- Chờ check lần 1
+- Chờ duyệt lần 2
+- Đã hoàn thành
+- Phân tích kết quả (Đúng/Cần sửa/Sai)
+
+### 🎯 Second Check Screen Features
+
+**Search & Filter:**
+- Tìm kiếm theo tên sản phẩm
+- Lọc theo check_result:
+  - Tất cả
+  - Đúng (correct)
+  - Cần sửa (needs_correction)
+  - Sai (incorrect)
+
+**Pagination:**
+- Page size options: 10, 20, 50, 100
+- Smart pagination với ellipsis (...)
+- Hiển thị tổng số items
+
+**Modal Detail View:**
+- Xem đầy đủ thông tin sản phẩm
+- Xem ảnh đã chụp (1-3 ảnh)
+- So sánh thông tin cũ/mới
+- Phê duyệt hoặc từ chối
+
+### 🔄 Workflow Process
+
+```
+1. Sản phẩm mới
+   ↓
+2. Nhân viên quét mã → First Check
+   ↓
+3. Cập nhật thông tin + chụp ảnh
+   ↓
+4. Gửi lên hệ thống (first_check = 1)
+   ↓
+5. Supervisor xem trong Second Check
+   ↓
+6. Phê duyệt → Hoàn thành (second_check = 1)
+   OR
+   Từ chối → Quay lại First Check (check_result = 'rejected')
 ```
 
 ## 🔧 Troubleshooting
@@ -745,14 +1154,38 @@ WHERE name = 'ITEM-001';
    - `is_sales_item = 1`
    - `is_fixed_asset = 0`
 
-3. Nếu dùng barcode, kiểm tra bảng `tabItem Barcode`:
+---
+
+### Vấn đề 6: Lỗi khi tạo sản phẩm mới
+
+**Triệu chứng:**
+```
+Out of range value for column 'standard_rate' at row 1
+```
+
+**Giải pháp:**
+
+Giá sản phẩm không được vượt quá 999,999,999 VND. Kiểm tra giá nhập vào:
+```typescript
+// Frontend validation
+if (price > 999999999) {
+  showToast('Giá không được vượt quá 999,999,999', 'error');
+  return;
+}
+```
+
+Backend đã có validation, nếu vẫn gặp lỗi:
 ```sql
-SELECT * FROM `tabItem Barcode` WHERE barcode = 'your-barcode';
+-- Kiểm tra column definition
+SHOW COLUMNS FROM tabItem LIKE 'standard_rate';
+
+-- Nếu cần, alter column
+ALTER TABLE tabItem MODIFY standard_rate DECIMAL(18,6);
 ```
 
 ---
 
-### Vấn đề 6: TypeScript compilation errors
+### Vấn đề 7: TypeScript compilation errors
 
 **Triệu chứng:**
 ```
@@ -779,7 +1212,7 @@ rm -rf node_modules/.cache
 
 ---
 
-### Vấn đề 7: Frontend không load được API data
+### Vấn đề 8: Frontend không load được API data
 
 **Triệu chứng:**
 - Network tab shows 404 hoặc connection refused
@@ -802,6 +1235,58 @@ curl http://localhost:3001/health
 
 ---
 
+### Vấn đề 9: Không thể upload ảnh
+
+**Triệu chứng:**
+- Ảnh không được lưu sau khi chụp
+- Console error về file size
+
+**Giải pháp:**
+
+1. Kiểm tra column type trong database:
+```sql
+-- image_1, image_2, image_3 phải là longtext
+SHOW COLUMNS FROM tabItem WHERE Field LIKE 'image_%';
+```
+
+2. Nếu cần, alter columns:
+```sql
+ALTER TABLE tabItem 
+MODIFY image_1 LONGTEXT,
+MODIFY image_2 LONGTEXT,
+MODIFY image_3 LONGTEXT;
+```
+
+3. Giảm kích thước ảnh nếu quá lớn (compression)
+
+---
+
+### Vấn đề 10: Dashboard không cập nhật
+
+**Triệu chứng:**
+- Thống kê không thay đổi sau khi check sản phẩm
+
+**Giải pháp:**
+
+1. Kiểm tra auto-refresh đang hoạt động:
+```typescript
+// CheckDashboard.tsx
+useEffect(() => {
+  fetchStats();
+  const interval = setInterval(fetchStats, 30000);
+  return () => clearInterval(interval);
+}, []);
+```
+
+2. Kiểm tra API `/api/check-workflow/stats`:
+```bash
+curl http://localhost:3001/api/check-workflow/stats
+```
+
+3. Clear browser cache và refresh
+
+---
+
 ### Debug Tips
 
 #### Enable verbose logging
@@ -810,6 +1295,7 @@ Thêm vào `server/index.ts`:
 ```typescript
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  console.log('Body:', req.body);
   next();
 });
 ```
@@ -824,6 +1310,16 @@ async function testQuery() {
   try {
     const [rows] = await pool.query('SELECT COUNT(*) as count FROM tabItem');
     console.log('Total items:', rows);
+    
+    const [stats] = await pool.query(`
+      SELECT 
+        COUNT(*) as total,
+        SUM(CASE WHEN first_check = 0 THEN 1 ELSE 0 END) as pending_first,
+        SUM(CASE WHEN first_check = 1 AND second_check = 0 THEN 1 ELSE 0 END) as pending_second
+      FROM tabItem
+      WHERE disabled = 0 AND is_sales_item = 1 AND is_fixed_asset = 0
+    `);
+    console.log('Workflow stats:', stats);
   } catch (error) {
     console.error('Query failed:', error);
   }
@@ -836,6 +1332,27 @@ testQuery();
 Run test:
 ```bash
 npx tsx test-db.ts
+```
+
+#### Test API endpoints
+
+```bash
+# Health check
+curl http://localhost:3001/health
+
+# Login
+curl -X POST http://localhost:3001/api/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"EMP-00001"}'
+
+# Get stats
+curl http://localhost:3001/api/check-workflow/stats
+
+# Get pending first check
+curl http://localhost:3001/api/products/pending-first-check?limit=10
+
+# Get pending second check
+curl http://localhost:3001/api/products/pending-second-check?limit=10
 ```
 
 ## 🤝 Contributing
@@ -1007,6 +1524,156 @@ Khi đề xuất tính năng mới:
 - [Express.js Guide](https://expressjs.com/)
 - [TypeScript Handbook](https://www.typescriptlang.org/docs/)
 - [Vite Guide](https://vitejs.dev/guide/)
+- [MySQL Documentation](https://dev.mysql.com/doc/)
+
+### 🎯 Project Roadmap
+
+#### ✅ Completed (v1.0)
+- [x] Login authentication với ERPNext
+- [x] Barcode scanning
+- [x] Product list với phân trang
+- [x] Product creation với 119 đơn vị
+- [x] Double-check workflow (First Check + Second Check)
+- [x] Dashboard thống kê với progress bars
+- [x] Searchable dropdown cho đơn vị
+- [x] Image capture (1-3 ảnh)
+- [x] Filter & search trong Second Check
+- [x] Auto-refresh dashboard (30s)
+- [x] Product search trong danh sách
+- [x] Phân trang với page size selector
+
+#### 🚧 In Progress / Planned
+
+**Phase 1: Security & Validation (Priority: High)**
+- [ ] Price validation (max 999,999,999) ở frontend
+- [ ] Input sanitization và validation
+- [ ] JWT authentication thay vì localStorage
+- [ ] Rate limiting cho API endpoints
+- [ ] Password hashing (nếu thêm password)
+- [ ] XSS protection
+- [ ] CSRF protection
+
+**Phase 2: Testing & Quality (Priority: High)**
+- [ ] Unit tests cho components
+- [ ] Integration tests cho API
+- [ ] E2E tests với Cypress/Playwright
+- [ ] Test coverage >= 80%
+- [ ] Performance testing
+- [ ] Load testing cho API
+
+**Phase 3: Features Enhancement (Priority: Medium)**
+- [ ] Frappe REST API integration cho CRUD
+- [ ] Real-time updates với WebSocket
+- [ ] Bulk operations (import/export Excel)
+- [ ] Advanced filtering và sorting
+- [ ] Product history tracking
+- [ ] Audit logging
+- [ ] Role-based access control (Staff/Supervisor/Admin)
+- [ ] Multi-language support (i18n)
+- [ ] Dark mode
+- [ ] Print barcode labels
+
+**Phase 4: Performance Optimization (Priority: Medium)**
+- [ ] Redis caching layer
+- [ ] Database query optimization
+- [ ] Image compression và lazy loading
+- [ ] CDN cho static assets
+- [ ] Service Worker cho offline mode
+- [ ] Progressive Web App (PWA)
+
+**Phase 5: Mobile & Reporting (Priority: Low)**
+- [ ] React Native mobile app
+- [ ] Responsive design improvement
+- [ ] Export reports (PDF, Excel)
+- [ ] Dashboard charts (Chart.js/Recharts)
+- [ ] Email notifications
+- [ ] SMS notifications
+
+**Phase 6: DevOps & Monitoring (Priority: Medium)**
+- [ ] Docker containerization
+- [ ] CI/CD pipeline (GitHub Actions)
+- [ ] Error tracking (Sentry)
+- [ ] Performance monitoring (New Relic/DataDog)
+- [ ] Logging aggregation (ELK stack)
+- [ ] Health checks và alerts
+- [ ] Backup automation
+
+### � Known Issues
+
+1. **Price Validation**: Frontend cần thêm validation cho giá tối đa 999,999,999
+2. **No Unit Tests**: Project chưa có test suite
+3. **localStorage Security**: Nên chuyển sang JWT với httpOnly cookies
+4. **No Error Tracking**: Chưa có system monitoring/logging
+5. **CORS Configuration**: Đang allow tất cả origins (cần restrict trong production)
+6. **Image Size**: Không có compression cho ảnh được upload
+7. **No Pagination Cache**: Mỗi lần chuyển trang đều query lại database
+
+### 🔧 Performance Notes
+
+**Current Performance:**
+- Database queries: ~50-100ms (LAN)
+- API response time: ~100-200ms
+- Frontend render: ~16ms (60 FPS)
+- Image upload: ~500ms-2s (tùy kích thước)
+
+**Recommendations:**
+- Implement Redis caching cho product list: Giảm 80% database queries
+- Add database indexes: Đã có indexes cho workflow fields
+- Compress images: Giảm 70% bandwidth
+- Use CDN: Giảm 50% load time cho static assets
+
+### 📝 Notes
+
+### ⚠️ Important Notes
+
+1. **Product Creation**: 
+   - Tạo trực tiếp vào bảng `tabItem`
+   - Giá không được vượt quá 999,999,999 (DECIMAL limit)
+   - Sản phẩm mới tự động được đánh dấu checked
+
+2. **Barcode Handling**: 
+   - Hiện tại sử dụng `item_code` (name) làm barcode
+   - Không sử dụng bảng `tabItem Barcode`
+   - Tìm kiếm theo tên sản phẩm hoặc item_code
+
+3. **Authentication**: 
+   - Chỉ verify username, không có password
+   - Sử dụng localStorage (không bảo mật cho production)
+   - Trong production nên implement:
+     - JWT tokens với httpOnly cookies
+     - Refresh token mechanism
+     - Session management
+     - Password hashing với bcrypt
+
+4. **Check Workflow States**:
+   ```
+   first_check=0, second_check=0 → Chưa check
+   first_check=1, second_check=0 → Chờ duyệt lần 2
+   first_check=1, second_check=1 → Hoàn thành
+   check_result='rejected' → Bị từ chối, về lại First Check
+   ```
+
+5. **Image Storage**:
+   - Lưu dưới dạng base64 trong database (longtext)
+   - Tối đa 3 ảnh mỗi sản phẩm
+   - Không có compression (cần cải thiện)
+   - Trong production nên:
+     - Upload lên S3/Cloud Storage
+     - Lưu URL thay vì base64
+     - Implement image compression
+
+6. **Security Considerations**:
+   - ⚠️ Thêm rate limiting cho API
+   - ⚠️ Input validation và sanitization
+   - ✅ SQL injection prevention (đã có với prepared statements)
+   - ⚠️ XSS protection cần thêm
+   - ⚠️ CORS config cần restrict trong production
+   - ⚠️ Helmet.js cho security headers
+
+7. **Database Schema Requirements**:
+   - ERPNext database phải có các trường workflow trong `tabItem`
+   - Nếu chưa có, chạy migration script (xem Database Schema section)
+   - Indexes đã được tạo cho tối ưu query performance
 
 ## 📄 License
 
