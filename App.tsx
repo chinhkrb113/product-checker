@@ -5,6 +5,9 @@ import ScanScreen from './components/ScanScreen';
 import ProductListScreen from './components/ProductListScreen';
 import ProductDetailScreen from './components/ProductDetailScreen';
 import CreateProductScreen from './components/CreateProductScreen';
+import FirstCheckScreen from './components/FirstCheckScreen';
+import SecondCheckScreen from './components/SecondCheckScreen';
+import CheckDashboard from './components/CheckDashboard';
 import Toast from './components/Toast';
 
 const API_URL = 'http://localhost:3001/api';
@@ -38,10 +41,10 @@ const App: React.FC = () => {
     }
   }, [toast]);
 
-  // Fetch product khi cần hiển thị detail screen
+  // Fetch product khi cần hiển thị detail screen hoặc first-check screen
   useEffect(() => {
     const fetchProduct = async () => {
-      if (screen === 'detail' && currentBarcode) {
+      if ((screen === 'detail' || screen === 'first-check') && currentBarcode) {
         try {
           const response = await fetch(`${API_URL}/products/${currentBarcode}`);
           if (response.ok) {
@@ -144,6 +147,28 @@ const App: React.FC = () => {
           );
         }
         return <ScanScreen onNavigate={handleNavigate} user={user} onLogout={handleLogout} />;
+      case 'first-check':
+        if (currentProduct) {
+          return (
+            <FirstCheckScreen
+              product={currentProduct}
+              user={user}
+              onNavigate={handleNavigate}
+              showToast={showToast}
+            />
+          );
+        }
+        return <ScanScreen onNavigate={handleNavigate} user={user} onLogout={handleLogout} />;
+      case 'second-check':
+        return (
+          <SecondCheckScreen
+            user={user}
+            onNavigate={handleNavigate}
+            showToast={showToast}
+          />
+        );
+      case 'check-dashboard':
+        return <CheckDashboard onNavigate={handleNavigate} />;
       case 'create':
         if (currentBarcode) {
           return (

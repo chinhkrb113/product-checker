@@ -145,6 +145,32 @@ const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({ product, onNa
             </div>
           ) : (
             <div className="flex flex-col space-y-3">
+              {/* Nút kiểm tra workflow */}
+              {(!currentProduct.first_check || currentProduct.first_check === 0) && (
+                <button 
+                  onClick={() => onNavigate('first-check', currentProduct.barcode)} 
+                  className="w-full bg-orange-600 text-white py-3 rounded-lg font-semibold hover:bg-orange-700 transition flex items-center justify-center"
+                >
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                  Kiểm tra lần 1
+                </button>
+              )}
+              
+              {currentProduct.first_check === 1 && (!currentProduct.second_check || currentProduct.second_check === 0) && (
+                <div className="w-full bg-blue-50 border border-blue-200 p-3 rounded-lg text-center">
+                  <p className="text-sm text-blue-700 font-medium">✓ Đã kiểm tra lần 1</p>
+                  <p className="text-xs text-blue-600 mt-1">Chờ supervisor duyệt</p>
+                </div>
+              )}
+              
+              {currentProduct.first_check === 1 && currentProduct.second_check === 1 && (
+                <div className="w-full bg-green-50 border border-green-200 p-3 rounded-lg text-center">
+                  <p className="text-sm text-green-700 font-medium">✓ Đã hoàn thành kiểm tra 2 lần</p>
+                </div>
+              )}
+              
               <button onClick={() => setIsEditing(true)} className="w-full bg-gray-800 text-white py-3 rounded-lg font-semibold hover:bg-gray-900 transition">Chỉnh sửa thông tin</button>
               <button onClick={handleCheck} disabled={currentProduct.checked} className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition disabled:bg-blue-300 disabled:cursor-not-allowed">
                 {currentProduct.checked ? 'Đã Check' : 'Check'}
