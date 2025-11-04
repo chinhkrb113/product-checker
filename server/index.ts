@@ -106,6 +106,16 @@ app.get('/api/products', async (req, res) => {
     const limit = parseInt(req.query.limit as string) || 50;
     const offset = parseInt(req.query.offset as string) || 0;
 
+    // Query đếm tổng số items
+    const [countResult] = await pool.query<any[]>(
+      `SELECT COUNT(*) as total
+      FROM tabItem 
+      WHERE disabled = 0 
+        AND is_sales_item = 1
+        AND is_fixed_asset = 0`
+    );
+    const total = countResult[0]?.total || 0;
+
     // Query lấy items từ tabItem với pagination
     const [items] = await pool.query<TabItem[]>(
       `SELECT 
@@ -114,7 +124,9 @@ app.get('/api/products', async (req, res) => {
         standard_rate,
         stock_uom,
         disabled,
-        is_sales_item
+        is_sales_item,
+        first_check,
+        second_check
       FROM tabItem 
       WHERE disabled = 0 
         AND is_sales_item = 1
@@ -125,7 +137,7 @@ app.get('/api/products', async (req, res) => {
     );
 
     if (!items || items.length === 0) {
-      return res.json([]);
+      return res.json({ data: [], total: 0 });
     }
 
     // Transform data sang format của frontend
@@ -136,15 +148,129 @@ app.get('/api/products', async (req, res) => {
         name: item.item_name || item.item_code,
         price: item.standard_rate || 0,
         unit: item.stock_uom || 'cái',
-        checked: false // Mặc định là chưa check
+        checked: item.first_check === 1 && item.second_check === 1,
+        first_check: item.first_check || 0,
+        second_check: item.second_check || 0
       };
     });
 
-    res.json(products);
+    res.json({ data: products, total });
   } catch (error) {
     console.error('Error fetching products:', error);
     res.status(500).json({ 
       error: 'Failed to fetch products',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// API: Tìm kiếm sản phẩm theo tên hoặc barcode
+app.get('/api/products/search', async (req, res) => {
+  try {
+    const searchTerm = (req.query.q as string) || '';
+    const limit = parseInt(req.query.limit as string) || 50;
+    const offset = parseInt(req.query.offset as string) || 0;
+
+    if (!searchTerm.trim()) {
+      // Nếu không có search term, đếm tổng và trả về danh sách bình thường
+      const [countResult] = await pool.query<any[]>(
+        `SELECT COUNT(*) as total
+        FROM tabItem 
+        WHERE disabled = 0 
+          AND is_sales_item = 1
+          AND is_fixed_asset = 0`
+      );
+      const total = countResult[0]?.total || 0;
+
+      const [items] = await pool.query<TabItem[]>(
+        `SELECT 
+          name as item_code,
+          item_name,
+          standard_rate,
+          stock_uom,
+          first_check,
+          second_check
+        FROM tabItem 
+        WHERE disabled = 0 
+          AND is_sales_item = 1
+          AND is_fixed_asset = 0
+        ORDER BY item_name ASC
+        LIMIT ? OFFSET ?`,
+        [limit, offset]
+      );
+
+      const products = items.map(item => ({
+        barcode: item.item_code,
+        name: item.item_name || item.item_code,
+        price: item.standard_rate || 0,
+        unit: item.stock_uom || 'cái',
+        checked: item.first_check === 1 && item.second_check === 1,
+        first_check: item.first_check || 0,
+        second_check: item.second_check || 0
+      }));
+
+      return res.json({ data: products, total });
+    }
+
+    // Đếm tổng kết quả tìm kiếm
+    const searchPattern = `%${searchTerm}%`;
+    const [countResult] = await pool.query<any[]>(
+      `SELECT COUNT(*) as total
+      FROM tabItem 
+      WHERE disabled = 0 
+        AND is_sales_item = 1
+        AND is_fixed_asset = 0
+        AND (
+          item_name LIKE ? 
+          OR name LIKE ?
+        )`,
+      [searchPattern, searchPattern]
+    );
+    const total = countResult[0]?.total || 0;
+
+    // Tìm kiếm theo tên hoặc item_code
+    const [items] = await pool.query<TabItem[]>(
+      `SELECT 
+        name as item_code,
+        item_name,
+        standard_rate,
+        stock_uom,
+        first_check,
+        second_check
+      FROM tabItem 
+      WHERE disabled = 0 
+        AND is_sales_item = 1
+        AND is_fixed_asset = 0
+        AND (
+          item_name LIKE ? 
+          OR name LIKE ?
+        )
+      ORDER BY 
+        CASE 
+          WHEN item_name LIKE ? THEN 1
+          WHEN name LIKE ? THEN 2
+          ELSE 3
+        END,
+        item_name ASC
+      LIMIT ? OFFSET ?`,
+      [searchPattern, searchPattern, `${searchTerm}%`, `${searchTerm}%`, limit, offset]
+    );
+
+    const products = items.map(item => ({
+      barcode: item.item_code,
+      name: item.item_name || item.item_code,
+      price: item.standard_rate || 0,
+      unit: item.stock_uom || 'cái',
+      checked: item.first_check === 1 && item.second_check === 1,
+      first_check: item.first_check || 0,
+      second_check: item.second_check || 0
+    }));
+
+    res.json({ data: products, total });
+  } catch (error) {
+    console.error('Error searching products:', error);
+    res.status(500).json({ 
+      error: 'Failed to search products',
       message: error instanceof Error ? error.message : 'Unknown error'
     });
   }
@@ -332,7 +458,20 @@ app.get('/api/products/:barcode', async (req, res) => {
         standard_rate,
         stock_uom,
         disabled,
-        is_sales_item
+        is_sales_item,
+        first_check,
+        second_check,
+        checked_by,
+        checked_at,
+        check_result,
+        new_product_name,
+        new_unit,
+        new_barcode,
+        new_price,
+        stock,
+        image_1,
+        image_2,
+        image_3
       FROM tabItem 
       WHERE name = ? 
         AND disabled = 0 
@@ -352,7 +491,18 @@ app.get('/api/products/:barcode', async (req, res) => {
       name: item.item_name || item.item_code,
       price: item.standard_rate || 0,
       unit: item.stock_uom || 'cái',
-      checked: false
+      checked: item.first_check === 1 && item.second_check === 1,
+      first_check: item.first_check || 0,
+      second_check: item.second_check || 0,
+      checked_by: item.checked_by,
+      checked_at: item.checked_at,
+      check_result: item.check_result,
+      new_product_name: item.new_product_name,
+      new_unit: item.new_unit,
+      new_barcode: item.new_barcode,
+      new_price: item.new_price,
+      stock: item.stock,
+      images: [item.image_1, item.image_2, item.image_3].filter(Boolean)
     };
 
     res.json(product);
@@ -371,13 +521,13 @@ app.post('/api/products', async (req, res) => {
     const { barcode, name, price, unit } = req.body;
 
     // Validate input
-    if (!barcode || !name || price === undefined) {
+    if (!barcode || !name || price === undefined || !unit) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Check if item already exists
-    const [existing] = await pool.query<TabItemBarcode[]>(
-      `SELECT parent FROM \`tabItem Barcode\` WHERE barcode = ? LIMIT 1`,
+    // Check if item already exists (dùng item_code làm barcode)
+    const [existing] = await pool.query<TabItem[]>(
+      `SELECT name FROM tabItem WHERE name = ? LIMIT 1`,
       [barcode]
     );
 
@@ -385,14 +535,38 @@ app.post('/api/products', async (req, res) => {
       return res.status(409).json({ error: 'Product with this barcode already exists' });
     }
 
-    // Note: Tạo item mới trong ERPNext/Frappe cần nhiều bước phức tạp
-    // Tạm thời return success với mock data
-    // Trong production, cần gọi Frappe API để tạo item đúng cách
+    // Insert new item vào tabItem
+    await pool.query(
+      `INSERT INTO tabItem (
+        name, 
+        item_code, 
+        item_name, 
+        stock_uom, 
+        standard_rate,
+        disabled,
+        is_sales_item,
+        is_stock_item,
+        is_fixed_asset,
+        first_check,
+        second_check,
+        creation,
+        modified
+      ) VALUES (?, ?, ?, ?, ?, 0, 1, 1, 0, 0, 0, NOW(), NOW())`,
+      [barcode, barcode, name, unit, price]
+    );
 
     res.json({
       success: true,
-      message: 'Product creation requires Frappe API integration',
-      product: { barcode, name, price, unit, checked: true }
+      message: 'Product created successfully',
+      product: { 
+        barcode, 
+        name, 
+        price, 
+        unit, 
+        checked: false,
+        first_check: 0,
+        second_check: 0
+      }
     });
   } catch (error) {
     console.error('Error creating product:', error);

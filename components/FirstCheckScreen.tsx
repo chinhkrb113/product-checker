@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Product, Screen, User } from '../types';
 import { BackIcon, CameraIcon, CheckIcon } from './icons';
+import { UNIT_OPTIONS } from '../constants';
 
 const API_URL = 'http://localhost:3001';
 
@@ -27,6 +28,32 @@ const FirstCheckScreen: React.FC<FirstCheckScreenProps> = ({
   });
   
   const [loading, setLoading] = useState(false);
+  const [unitSearchTerm, setUnitSearchTerm] = useState('');
+  const [isUnitDropdownOpen, setIsUnitDropdownOpen] = useState(false);
+  const unitDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (unitDropdownRef.current && !unitDropdownRef.current.contains(event.target as Node)) {
+        setIsUnitDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Filter units based on search term
+  const filteredUnits = UNIT_OPTIONS.filter(unit =>
+    unit.toLowerCase().includes(unitSearchTerm.toLowerCase())
+  );
+
+  const handleUnitSelect = (unit: string) => {
+    setCheckData({ ...checkData, new_unit: unit });
+    setUnitSearchTerm(unit);
+    setIsUnitDropdownOpen(false);
+  };
 
   const handleImageCapture = () => {
     const input = document.createElement('input');
@@ -224,13 +251,55 @@ const FirstCheckScreen: React.FC<FirstCheckScreenProps> = ({
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Đơn vị mới
                 </label>
-                <input
-                  type="text"
-                  placeholder="Nhập đơn vị mới (nếu có)"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  value={checkData.new_unit}
-                  onChange={(e) => setCheckData({ ...checkData, new_unit: e.target.value })}
-                />
+                <div className="relative" ref={unitDropdownRef}>
+                  <input
+                    type="text"
+                    placeholder="Chọn hoặc tìm đơn vị..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    value={unitSearchTerm}
+                    onChange={(e) => {
+                      setUnitSearchTerm(e.target.value);
+                      setCheckData({ ...checkData, new_unit: e.target.value });
+                      setIsUnitDropdownOpen(true);
+                    }}
+                    onFocus={() => setIsUnitDropdownOpen(true)}
+                  />
+                  
+                  {/* Dropdown icon */}
+                  <button
+                    type="button"
+                    onClick={() => setIsUnitDropdownOpen(!isUnitDropdownOpen)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+
+                  {/* Dropdown menu */}
+                  {isUnitDropdownOpen && (
+                    <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                      {filteredUnits.length > 0 ? (
+                        filteredUnits.map((unit, index) => (
+                          <button
+                            key={index}
+                            type="button"
+                            onClick={() => handleUnitSelect(unit)}
+                            className="w-full text-left px-3 py-2 hover:bg-blue-50 transition border-b border-gray-100 last:border-b-0"
+                          >
+                            <span className={`${checkData.new_unit === unit ? 'font-semibold text-blue-600' : 'text-gray-700'}`}>
+                              {unit}
+                            </span>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="px-3 py-2 text-gray-500 text-sm">
+                          Không tìm thấy đơn vị phù hợp
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </section>

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Product, Screen } from '../types';
 import { UNIT_OPTIONS } from '../constants';
 import { BackIcon } from './icons';
@@ -24,6 +24,36 @@ const CreateProductScreen: React.FC<CreateProductScreenProps> = ({ barcode, onNa
     unit: '',
   });
   const [errors, setErrors] = useState<FormErrors>({});
+  const [unitSearchTerm, setUnitSearchTerm] = useState('');
+  const [isUnitDropdownOpen, setIsUnitDropdownOpen] = useState(false);
+  const unitDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (unitDropdownRef.current && !unitDropdownRef.current.contains(event.target as Node)) {
+        setIsUnitDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Filter units based on search term
+  const filteredUnits = UNIT_OPTIONS.filter(unit =>
+    unit.toLowerCase().includes(unitSearchTerm.toLowerCase())
+  );
+
+  const handleUnitSelect = (unit: string) => {
+    setFormData(prev => ({ ...prev, unit }));
+    setUnitSearchTerm(unit);
+    setIsUnitDropdownOpen(false);
+    // Clear unit error when selected
+    if (errors.unit) {
+      setErrors(prev => ({ ...prev, unit: undefined }));
+    }
+  };
 
   const validate = (): boolean => {
     const newErrors: FormErrors = {};
@@ -87,10 +117,56 @@ const CreateProductScreen: React.FC<CreateProductScreenProps> = ({ barcode, onNa
             </div>
             <div>
                 <label htmlFor="unit" className="block text-sm font-medium text-gray-700">Đơn vị tính *</label>
-                <select id="unit" name="unit" value={formData.unit} onChange={handleInputChange} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2">
-                    <option value="">Chọn đơn vị</option>
-                    {UNIT_OPTIONS.map(opt => <option key={opt} value={opt}>{opt.charAt(0).toUpperCase() + opt.slice(1)}</option>)}
-                </select>
+                <div className="relative mt-1" ref={unitDropdownRef}>
+                  <input
+                    type="text"
+                    id="unit"
+                    placeholder="Chọn hoặc tìm đơn vị..."
+                    className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2"
+                    value={unitSearchTerm}
+                    onChange={(e) => {
+                      setUnitSearchTerm(e.target.value);
+                      setFormData(prev => ({ ...prev, unit: e.target.value }));
+                      setIsUnitDropdownOpen(true);
+                    }}
+                    onFocus={() => setIsUnitDropdownOpen(true)}
+                  />
+                  
+                  {/* Dropdown icon */}
+                  <button
+                    type="button"
+                    onClick={() => setIsUnitDropdownOpen(!isUnitDropdownOpen)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+
+                  {/* Dropdown menu */}
+                  {isUnitDropdownOpen && (
+                    <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                      {filteredUnits.length > 0 ? (
+                        filteredUnits.map((unit, index) => (
+                          <button
+                            key={index}
+                            type="button"
+                            onClick={() => handleUnitSelect(unit)}
+                            className="w-full text-left px-3 py-2 hover:bg-blue-50 transition border-b border-gray-100 last:border-b-0"
+                          >
+                            <span className={`${formData.unit === unit ? 'font-semibold text-blue-600' : 'text-gray-700'}`}>
+                              {unit}
+                            </span>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="px-3 py-2 text-gray-500 text-sm">
+                          Không tìm thấy đơn vị phù hợp
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
                 {errors.unit && <p className="text-red-500 text-xs mt-1">{errors.unit}</p>}
             </div>
         </div>

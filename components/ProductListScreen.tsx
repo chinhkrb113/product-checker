@@ -1,10 +1,9 @@
 
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Product, Screen } from '../types';
 import { BackIcon, SearchIcon } from './icons';
 
-const API_URL = 'http://localhost:3001';
-const PAGE_SIZE = 50;
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 interface ProductListScreenProps {
   onNavigate: (screen: Screen, barcode?: string) => void;
@@ -13,101 +12,127 @@ interface ProductListScreenProps {
 const ProductListScreen: React.FC<ProductListScreenProps> = ({ onNavigate }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'checked' | 'unchecked'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'unchecked' | 'first-checked' | 'completed'>('all');
   const [loading, setLoading] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
-  const [hasMore, setHasMore] = useState(true);
-  const [page, setPage] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalProducts, setTotalProducts] = useState(0);
   
-  const loadMoreRef = useRef<HTMLDivElement>(null);
-  const observerRef = useRef<IntersectionObserver | null>(null);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const formatPrice = (price: number) => {
     return price.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' });
   };
 
+  // Tính tổng số trang
+  const totalPages = Math.ceil(totalProducts / pageSize);
+
   // Fetch products từ API
-  const fetchProducts = useCallback(async (offset: number, isInitial = false) => {
-    if (loading || (!isInitial && !hasMore)) return;
-
+  const fetchProducts = useCallback(async (page: number, search: string = '') => {
     try {
-      if (isInitial) {
-        setInitialLoading(true);
-      } else {
-        setLoading(true);
-      }
+      setLoading(true);
 
-      const response = await fetch(
-        `${API_URL}/api/products?limit=${PAGE_SIZE}&offset=${offset}`
-      );
+      const offset = (page - 1) * pageSize;
+      const url = search.trim() 
+        ? `${API_URL}/api/products/search?q=${encodeURIComponent(search)}&limit=${pageSize}&offset=${offset}`
+        : `${API_URL}/api/products?limit=${pageSize}&offset=${offset}`;
+
+      const response = await fetch(url);
       
       if (!response.ok) {
         throw new Error('Failed to fetch products');
       }
 
-      const data = await response.json();
+      const result = await response.json();
       
-      if (data.length < PAGE_SIZE) {
-        setHasMore(false);
+      // Check if response is new format {data, total} or old format (array)
+      if (result.data && typeof result.total === 'number') {
+        setProducts(result.data);
+        setTotalProducts(result.total);
+      } else {
+        // Fallback to old format (array)
+        setProducts(result);
+        setTotalProducts(result.length);
       }
-
-      setProducts(prev => offset === 0 ? data : [...prev, ...data]);
     } catch (error) {
       console.error('Error fetching products:', error);
     } finally {
       setLoading(false);
-      setInitialLoading(false);
     }
-  }, [loading, hasMore]);
+  }, [pageSize]);
 
   // Load initial products
   useEffect(() => {
-    fetchProducts(0, true);
+    fetchProducts(1, searchTerm);
   }, []);
 
-  // Infinite scroll với Intersection Observer
+  // Handle search với debounce
   useEffect(() => {
-    if (initialLoading) return;
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
 
-    const currentRef = loadMoreRef.current;
-    if (!currentRef) return;
-
-    observerRef.current = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMore && !loading) {
-          const nextPage = page + 1;
-          setPage(nextPage);
-          fetchProducts(nextPage * PAGE_SIZE);
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    observerRef.current.observe(currentRef);
+    searchTimeoutRef.current = setTimeout(() => {
+      setCurrentPage(1);
+      fetchProducts(1, searchTerm);
+    }, 500);
 
     return () => {
-      if (observerRef.current && currentRef) {
-        observerRef.current.unobserve(currentRef);
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
       }
     };
-  }, [initialLoading, hasMore, loading, page, fetchProducts]);
+  }, [searchTerm, fetchProducts]);
+
+  // Handle page change
+  useEffect(() => {
+    fetchProducts(currentPage, searchTerm);
+  }, [currentPage, pageSize, fetchProducts]);
   
-  const filteredAndSortedProducts = useMemo(() => {
-    return products
-      .filter(p => {
-        // Filter by search term
-        const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                             p.barcode.includes(searchTerm);
-        
-        // Filter by status
-        const matchesStatus = statusFilter === 'all' || 
-                             (statusFilter === 'checked' && p.checked) ||
-                             (statusFilter === 'unchecked' && !p.checked);
-        
-        return matchesSearch && matchesStatus;
-      })
-      .sort((a, b) => a.name.localeCompare(b.name, 'vi'));
-  }, [products, searchTerm, statusFilter]);
+  // Filter by status
+  const filteredProducts = products.filter(p => {
+    if (statusFilter === 'all') return true;
+    if (statusFilter === 'unchecked') return !p.first_check || p.first_check === 0;
+    if (statusFilter === 'first-checked') return p.first_check === 1 && (!p.second_check || p.second_check === 0);
+    if (statusFilter === 'completed') return p.first_check === 1 && p.second_check === 1;
+    return true;
+  });
+
+  // Handle page size change
+  const handlePageSizeChange = (newSize: number) => {
+    setPageSize(newSize);
+    setCurrentPage(1);
+  };
+
+  // Generate page numbers to display
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = [];
+    const maxVisible = 5;
+
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (currentPage <= 3) {
+        for (let i = 1; i <= 4; i++) pages.push(i);
+        pages.push('...');
+        pages.push(totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1);
+        pages.push('...');
+        for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
+      } else {
+        pages.push(1);
+        pages.push('...');
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
+        pages.push('...');
+        pages.push(totalPages);
+      }
+    }
+
+    return pages;
+  };
 
   return (
     <div className="flex flex-col h-screen">
@@ -133,10 +158,10 @@ const ProductListScreen: React.FC<ProductListScreenProps> = ({ onNavigate }) => 
         </div>
 
         {/* Filter buttons */}
-        <div className="flex gap-2">
+        <div className="grid grid-cols-2 gap-2">
           <button
             onClick={() => setStatusFilter('all')}
-            className={`flex-1 py-2 px-4 rounded-lg font-semibold text-sm transition ${
+            className={`py-2 px-3 rounded-lg font-semibold text-sm transition ${
               statusFilter === 'all'
                 ? 'bg-blue-600 text-white shadow-md'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -145,75 +170,222 @@ const ProductListScreen: React.FC<ProductListScreenProps> = ({ onNavigate }) => 
             Tất cả ({products.length})
           </button>
           <button
-            onClick={() => setStatusFilter('checked')}
-            className={`flex-1 py-2 px-4 rounded-lg font-semibold text-sm transition ${
-              statusFilter === 'checked'
+            onClick={() => setStatusFilter('unchecked')}
+            className={`py-2 px-3 rounded-lg font-semibold text-sm transition ${
+              statusFilter === 'unchecked'
+                ? 'bg-gray-600 text-white shadow-md'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Chưa check ({products.filter(p => !p.first_check || p.first_check === 0).length})
+          </button>
+          <button
+            onClick={() => setStatusFilter('first-checked')}
+            className={`py-2 px-3 rounded-lg font-semibold text-sm transition ${
+              statusFilter === 'first-checked'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            ⚡ Check 1 lần ({products.filter(p => p.first_check === 1 && (!p.second_check || p.second_check === 0)).length})
+          </button>
+          <button
+            onClick={() => setStatusFilter('completed')}
+            className={`py-2 px-3 rounded-lg font-semibold text-sm transition ${
+              statusFilter === 'completed'
                 ? 'bg-green-600 text-white shadow-md'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
-            Đã check ({products.filter(p => p.checked).length})
-          </button>
-          <button
-            onClick={() => setStatusFilter('unchecked')}
-            className={`flex-1 py-2 px-4 rounded-lg font-semibold text-sm transition ${
-              statusFilter === 'unchecked'
-                ? 'bg-orange-600 text-white shadow-md'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            Chưa check ({products.filter(p => !p.checked).length})
+            ✓ Hoàn thành ({products.filter(p => p.first_check === 1 && p.second_check === 1).length})
           </button>
         </div>
       </div>
-      
-      <main className="flex-grow overflow-y-auto p-4 bg-gray-50">
-        {initialLoading ? (
+
+      <main className="flex-1 overflow-y-auto p-4">
+        {searchTerm && (
+          <div className="mb-3 text-sm text-gray-600">
+            {loading ? (
+              <span>Đang tìm kiếm...</span>
+            ) : (
+              <span>Tìm thấy <strong>{filteredProducts.length}</strong> sản phẩm (trang {currentPage}/{totalPages})</span>
+            )}
+          </div>
+        )}
+
+        {/* Page size selector */}
+        <div className="mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">Hiển thị:</span>
+            <select
+              value={pageSize}
+              onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+              className="border border-gray-300 rounded-lg px-3 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+              <option value={1000}>1000</option>
+            </select>
+            <span className="text-sm text-gray-600">sản phẩm/trang</span>
+          </div>
+          <div className="text-sm text-gray-600">
+            Tổng: <strong>{totalProducts}</strong> sản phẩm
+          </div>
+        </div>
+
+        {loading ? (
           <div className="text-center py-10">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             <p className="text-gray-500 mt-4">Đang tải sản phẩm...</p>
           </div>
-        ) : filteredAndSortedProducts.length > 0 ? (
+        ) : filteredProducts.length > 0 ? (
           <>
-            <ul className="space-y-3">
-              {filteredAndSortedProducts.map(product => (
-                <li key={product.barcode}>
+            {/* Pagination controls - Top */}
+            {totalPages > 1 && (
+              <div className="mb-4">
+                <div className="flex items-center justify-center gap-2 flex-wrap">
+                  {/* Previous button */}
                   <button
-                    onClick={() => onNavigate('detail', product.barcode)}
-                    className="w-full text-left p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition duration-200 flex justify-between items-center border border-gray-200"
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                    className="px-4 py-2 rounded-lg font-semibold text-sm transition disabled:opacity-50 disabled:cursor-not-allowed bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:hover:bg-gray-100"
                   >
-                    <div>
-                      <p className="font-bold text-gray-800">{product.name}</p>
-                      <p className="text-sm text-gray-500">Mã vạch: {product.barcode}</p>
-                      <p className="text-sm text-gray-600">Giá: {formatPrice(product.price)} / {product.unit}</p>
-                    </div>
-                    <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
-                      product.checked 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-gray-200 text-gray-700'
-                    }`}>
-                      {product.checked ? 'Đã Check' : 'Chưa Check'}
-                    </span>
+                    ← Trước
                   </button>
-                </li>
-              ))}
-            </ul>
-            
-            {/* Loading indicator cho infinite scroll */}
-            {hasMore && (
-              <div ref={loadMoreRef} className="text-center py-6">
-                {loading && (
-                  <>
-                    <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                    <p className="text-gray-500 text-sm mt-2">Đang tải thêm...</p>
-                  </>
-                )}
+
+                  {/* Page numbers */}
+                  {getPageNumbers().map((pageNum, index) => (
+                    pageNum === '...' ? (
+                      <span key={`ellipsis-top-${index}`} className="px-2 text-gray-500">...</span>
+                    ) : (
+                      <button
+                        key={`top-${pageNum}`}
+                        onClick={() => setCurrentPage(pageNum as number)}
+                        className={`px-4 py-2 rounded-lg font-semibold text-sm transition ${
+                          currentPage === pageNum
+                            ? 'bg-blue-600 text-white shadow-md'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    )
+                  ))}
+
+                  {/* Next button */}
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                    className="px-4 py-2 rounded-lg font-semibold text-sm transition disabled:opacity-50 disabled:cursor-not-allowed bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:hover:bg-gray-100"
+                  >
+                    Sau →
+                  </button>
+                </div>
+                
+                {/* Page info */}
+                <div className="text-center mt-3 text-sm text-gray-600">
+                  Trang {currentPage} / {totalPages}
+                </div>
               </div>
             )}
 
-            {!hasMore && products.length > PAGE_SIZE && (
-              <div className="text-center py-6">
-                <p className="text-gray-500 text-sm">Đã tải hết tất cả sản phẩm</p>
+            <ul className="space-y-3">
+              {filteredProducts.map(product => {
+                // Xác định trạng thái check
+                let checkStatus = 'unchecked';
+                let statusBadge = { bg: 'bg-gray-200', text: 'text-gray-700', label: 'Chưa check', subLabel: null };
+                
+                if (product.first_check === 1 && product.second_check === 1) {
+                  checkStatus = 'completed';
+                  statusBadge = { 
+                    bg: 'bg-green-100', 
+                    text: 'text-green-800', 
+                    label: '✓ Hoàn thành',
+                    subLabel: 'Đã check 2 lần'
+                  };
+                } else if (product.first_check === 1) {
+                  checkStatus = 'first-checked';
+                  statusBadge = { 
+                    bg: 'bg-blue-100', 
+                    text: 'text-blue-800', 
+                    label: '⚡ Check lần 1',
+                    subLabel: 'Chờ duyệt lần 2'
+                  };
+                }
+
+                return (
+                  <li key={product.barcode}>
+                    <button
+                      onClick={() => onNavigate('detail', product.barcode)}
+                      className="w-full text-left p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition duration-200 flex justify-between items-center border border-gray-200"
+                    >
+                      <div className="flex-1">
+                        <p className="font-bold text-gray-800">{product.name}</p>
+                        <p className="text-sm text-gray-500">Mã vạch: {product.barcode}</p>
+                        <p className="text-sm text-gray-600">Giá: {formatPrice(product.price)} / {product.unit}</p>
+                      </div>
+                      <div className="flex flex-col items-end gap-1 ml-4">
+                        <span className={`px-3 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${statusBadge.bg} ${statusBadge.text}`}>
+                          {statusBadge.label}
+                        </span>
+                        {statusBadge.subLabel && (
+                          <span className="text-xs text-gray-500">{statusBadge.subLabel}</span>
+                        )}
+                      </div>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+            
+            {/* Pagination controls - Bottom */}
+            {totalPages > 1 && (
+              <div className="mt-6 mb-4">
+                <div className="flex items-center justify-center gap-2 flex-wrap">
+                  {/* Previous button */}
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                    className="px-4 py-2 rounded-lg font-semibold text-sm transition disabled:opacity-50 disabled:cursor-not-allowed bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:hover:bg-gray-100"
+                  >
+                    ← Trước
+                  </button>
+
+                  {/* Page numbers */}
+                  {getPageNumbers().map((pageNum, index) => (
+                    pageNum === '...' ? (
+                      <span key={`ellipsis-bottom-${index}`} className="px-2 text-gray-500">...</span>
+                    ) : (
+                      <button
+                        key={`bottom-${pageNum}`}
+                        onClick={() => setCurrentPage(pageNum as number)}
+                        className={`px-4 py-2 rounded-lg font-semibold text-sm transition ${
+                          currentPage === pageNum
+                            ? 'bg-blue-600 text-white shadow-md'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    )
+                  ))}
+
+                  {/* Next button */}
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                    className="px-4 py-2 rounded-lg font-semibold text-sm transition disabled:opacity-50 disabled:cursor-not-allowed bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:hover:bg-gray-100"
+                  >
+                    Sau →
+                  </button>
+                </div>
+                
+                {/* Page info */}
+                <div className="text-center mt-3 text-sm text-gray-600">
+                  Trang {currentPage} / {totalPages}
+                </div>
               </div>
             )}
           </>

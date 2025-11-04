@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { CheckWorkflowStats, Screen } from '../types';
 import { BackIcon } from './icons';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_URL = 'http://localhost:3001';
 
 interface CheckDashboardProps {
   onNavigate: (screen: Screen) => void;
@@ -44,6 +44,9 @@ const CheckDashboard: React.FC<CheckDashboardProps> = ({ onNavigate }) => {
   }
 
   const progressPercent = stats.progress_percentage || 0;
+  // Tính tiến độ check lần 1: số sản phẩm đã qua check lần 1 / tổng số
+  const firstCheckCompleted = stats.pending_second_check + stats.completed;
+  const firstCheckPercent = stats.total > 0 ? (firstCheckCompleted / stats.total) * 100 : 0;
 
   return (
     <div className="flex flex-col h-screen bg-gray-50">
@@ -55,7 +58,7 @@ const CheckDashboard: React.FC<CheckDashboardProps> = ({ onNavigate }) => {
       </header>
 
       <main className="flex-grow overflow-y-auto p-4">
-        {/* Progress Bar */}
+        {/* Progress Bar - Overall Completion */}
         <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl p-6 mb-4 text-white shadow-lg">
           <h2 className="text-lg font-semibold mb-2">Tiến độ hoàn thành</h2>
           <div className="text-5xl font-bold mb-3">{progressPercent.toFixed(1)}%</div>
@@ -67,6 +70,21 @@ const CheckDashboard: React.FC<CheckDashboardProps> = ({ onNavigate }) => {
           </div>
           <div className="mt-3 text-sm opacity-90">
             {stats.completed} / {stats.total} sản phẩm đã hoàn thành
+          </div>
+        </div>
+
+        {/* Progress Bar - First Check */}
+        <div className="bg-gradient-to-r from-yellow-500 to-orange-500 rounded-xl p-6 mb-4 text-white shadow-lg">
+          <h2 className="text-lg font-semibold mb-2">Tiến độ Check lần 1</h2>
+          <div className="text-5xl font-bold mb-3">{firstCheckPercent.toFixed(1)}%</div>
+          <div className="w-full bg-white/30 rounded-full h-3 overflow-hidden">
+            <div 
+              className="bg-white h-full rounded-full transition-all duration-500"
+              style={{ width: `${firstCheckPercent}%` }}
+            />
+          </div>
+          <div className="mt-3 text-sm opacity-90">
+            {firstCheckCompleted} / {stats.total} sản phẩm đã check lần 1
           </div>
         </div>
 

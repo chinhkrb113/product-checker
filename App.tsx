@@ -45,6 +45,9 @@ const App: React.FC = () => {
   useEffect(() => {
     const fetchProduct = async () => {
       if ((screen === 'detail' || screen === 'first-check') && currentBarcode) {
+        // Clear previous product before fetching new one
+        setCurrentProduct(null);
+        
         try {
           const response = await fetch(`${API_URL}/products/${currentBarcode}`);
           if (response.ok) {
@@ -86,6 +89,10 @@ const App: React.FC = () => {
 
   const handleNavigate = (newScreen: Screen, barcode?: string) => {
     setCurrentBarcode(barcode || null);
+    // Clear current product when navigating to prevent showing stale data
+    if (barcode) {
+      setCurrentProduct(null);
+    }
     setScreen(newScreen);
   };
 
