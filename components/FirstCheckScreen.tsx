@@ -3,7 +3,7 @@ import { Product, Screen, User } from '../types';
 import { BackIcon, CameraIcon, CheckIcon } from './icons';
 import { UNIT_OPTIONS } from '../constants';
 
-const API_URL = 'http://localhost:3001';
+const API_URL = 'https://3gz0lzph-3001.asse.devtunnels.ms';
 
 interface FirstCheckScreenProps {
   product: Product;

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Screen } from '../types';
 
-const API_URL = 'http://localhost:3001';
+const API_URL = 'https://3gz0lzph-3001.asse.devtunnels.ms';
 
 interface LoginScreenProps {
   onLoginSuccess: (username: string, employeeName: string) => void;

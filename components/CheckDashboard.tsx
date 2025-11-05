@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { CheckWorkflowStats, Screen } from '../types';
 import { BackIcon } from './icons';
 
-const API_URL = 'http://localhost:3001';
+const API_URL = 'https://3gz0lzph-3001.asse.devtunnels.ms';
 
 interface CheckDashboardProps {
   onNavigate: (screen: Screen) => void;

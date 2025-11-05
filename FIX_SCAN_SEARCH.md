@@ -36,7 +36,7 @@ interface ScanScreenProps {
 }
 
 // ✅ AFTER: Không nhận products nữa
-const API_URL = 'http://localhost:3001';
+const API_URL = 'https://3gz0lzph-3001.asse.devtunnels.ms';
 
 interface ScanScreenProps {
   onNavigate: (screen: Screen, barcode?: string) => void;
@@ -216,10 +216,10 @@ npm run dev:full
 ### 3. Test với API trực tiếp
 ```bash
 # Test product tồn tại
-curl http://localhost:3001/api/products/ITEM-001
+curl https://3gz0lzph-3001.asse.devtunnels.ms/api/products/ITEM-001
 
 # Test product không tồn tại
-curl http://localhost:3001/api/products/NOTFOUND-999
+curl https://3gz0lzph-3001.asse.devtunnels.ms/api/products/NOTFOUND-999
 # Should return 404
 ```
 
