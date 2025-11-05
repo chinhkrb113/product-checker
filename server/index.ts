@@ -36,6 +36,7 @@ interface TabItem extends RowDataPacket {
   disabled: number;
   is_sales_item: number;
   owner: string | null;
+  item_group: string | null;
   
   // Double-check workflow fields
   first_check: number;
@@ -181,6 +182,8 @@ app.get('/api/products', async (req, res) => {
         stock_uom,
         disabled,
         is_sales_item,
+        item_group,
+        stock,
         first_check,
         second_check
       FROM tabItem 
@@ -204,6 +207,8 @@ app.get('/api/products', async (req, res) => {
         name: item.item_name || item.item_code,
         price: item.standard_rate || 0,
         unit: item.stock_uom || 'cái',
+        item_group: item.item_group,
+        stock: item.stock,
         checked: item.first_check === 1 && item.second_check === 1,
         first_check: item.first_check || 0,
         second_check: item.second_check || 0
@@ -270,6 +275,8 @@ app.get('/api/products/filter', async (req, res) => {
         item_name,
         standard_rate,
         stock_uom,
+        item_group,
+        stock,
         first_check,
         second_check
       FROM tabItem 
@@ -292,6 +299,8 @@ app.get('/api/products/filter', async (req, res) => {
       name: item.item_name || item.item_code,
       price: item.standard_rate || 0,
       unit: item.stock_uom || 'cái',
+      item_group: item.item_group,
+      stock: item.stock,
       checked: item.first_check === 1 && item.second_check === 1,
       first_check: item.first_check || 0,
       second_check: item.second_check || 0
@@ -331,6 +340,8 @@ app.get('/api/products/search', async (req, res) => {
           item_name,
           standard_rate,
           stock_uom,
+          item_group,
+          stock,
           first_check,
           second_check
         FROM tabItem 
@@ -347,6 +358,8 @@ app.get('/api/products/search', async (req, res) => {
         name: item.item_name || item.item_code,
         price: item.standard_rate || 0,
         unit: item.stock_uom || 'cái',
+        item_group: item.item_group,
+        stock: item.stock,
         checked: item.first_check === 1 && item.second_check === 1,
         first_check: item.first_check || 0,
         second_check: item.second_check || 0
@@ -378,6 +391,8 @@ app.get('/api/products/search', async (req, res) => {
         item_name,
         standard_rate,
         stock_uom,
+        item_group,
+        stock,
         first_check,
         second_check
       FROM tabItem 
@@ -404,6 +419,8 @@ app.get('/api/products/search', async (req, res) => {
       name: item.item_name || item.item_code,
       price: item.standard_rate || 0,
       unit: item.stock_uom || 'cái',
+      item_group: item.item_group,
+      stock: item.stock,
       checked: item.first_check === 1 && item.second_check === 1,
       first_check: item.first_check || 0,
       second_check: item.second_check || 0
@@ -431,6 +448,7 @@ app.get('/api/products/pending-first-check', async (req, res) => {
         item_name,
         standard_rate,
         stock_uom,
+        item_group,
         first_check,
         second_check,
         checked_by,
@@ -451,6 +469,7 @@ app.get('/api/products/pending-first-check', async (req, res) => {
       name: item.item_name,
       price: item.standard_rate || 0,
       unit: item.stock_uom || 'cái',
+      item_group: item.item_group,
       first_check: item.first_check || 0,
       second_check: item.second_check || 0,
       checked_by: item.checked_by,
@@ -538,6 +557,7 @@ app.get('/api/products/:barcode', async (req, res) => {
         stock_uom,
         disabled,
         is_sales_item,
+        item_group,
         first_check,
         second_check,
         checked_by,
@@ -570,6 +590,7 @@ app.get('/api/products/:barcode', async (req, res) => {
       name: item.item_name || item.item_code,
       price: item.standard_rate || 0,
       unit: item.stock_uom || 'cái',
+      item_group: item.item_group,
       checked: item.first_check === 1 && item.second_check === 1,
       first_check: item.first_check || 0,
       second_check: item.second_check || 0,

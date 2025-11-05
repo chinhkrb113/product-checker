@@ -4,6 +4,7 @@ export interface Product {
   name: string;
   price: number;
   unit: string;
+  item_group?: string | null;
   checked: boolean;
   owner?: string | null;
   
