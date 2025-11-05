@@ -49,16 +49,14 @@ const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({ product, onNa
         <section>
           <h2 className="text-lg font-semibold text-gray-700 mb-2">Thông tin hiện tại</h2>
           <div className="bg-gray-100 p-4 rounded-lg space-y-2 text-gray-800 border border-gray-200">
-            <p><span className="font-medium">Mã vạch:</span> {currentProduct.barcode}</p>
+            <p><span className="font-medium">Mã vạch:</span> <span className="text-xl font-bold">{currentProduct.barcode}</span></p>
             <p><span className="font-medium">Tên hiện tại:</span> {currentProduct.name}</p>
-            <p><span className="font-medium">Giá hiện tại:</span> {formatPrice(currentProduct.price)}</p>
+            <p><span className="font-medium">Giá hiện tại:</span> <span className="text-xl font-bold">{formatPrice(currentProduct.price)}</span></p>
             <p><span className="font-medium">Đơn vị hiện tại:</span> {currentProduct.unit}</p>
             {currentProduct.item_group && (
               <p><span className="font-medium">Nhóm sản phẩm:</span> {currentProduct.item_group}</p>
             )}
-            {(currentProduct.stock !== null && currentProduct.stock !== undefined) && (
-              <p><span className="font-medium">Số lượng tồn kho thực tế:</span> {currentProduct.stock} {currentProduct.unit}</p>
-            )}
+            <p><span className="font-medium">Số lượng tồn kho thực tế:</span> {currentProduct.stock ?? 0} {currentProduct.unit}</p>
           </div>
         </section>
 

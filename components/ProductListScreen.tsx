@@ -346,8 +346,8 @@ const ProductListScreen: React.FC<ProductListScreenProps> = ({ onNavigate }) => 
                     >
                       <div className="flex-1">
                         <p className="font-bold text-gray-800">{product.name}</p>
-                        <p className="text-sm text-gray-500">Mã vạch: {product.barcode}</p>
-                        <p className="text-sm text-gray-600">Giá: {formatPrice(product.price)} / {product.unit}</p>
+                        <p className="text-sm text-gray-500">Mã vạch: <span className="font-bold text-gray-700">{product.barcode}</span></p>
+                        <p className="text-sm text-gray-600">Giá: <span className="font-bold text-gray-800">{formatPrice(product.price)}</span> / {product.unit}</p>
                       </div>
                       <div className="flex flex-col items-end gap-1 ml-4">
                         <span className={`px-3 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${statusBadge.bg} ${statusBadge.text}`}>

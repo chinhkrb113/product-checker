@@ -169,7 +169,7 @@ const FirstCheckScreen: React.FC<FirstCheckScreenProps> = ({
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-gray-600">Mã vạch:</span>
-              <span className="font-mono font-semibold">{product.barcode}</span>
+              <span className="font-mono text-lg font-bold">{product.barcode}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600">Tên sản phẩm:</span>
@@ -177,11 +177,21 @@ const FirstCheckScreen: React.FC<FirstCheckScreenProps> = ({
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600">Giá:</span>
-              <span className="font-medium">{formatPrice(product.price)}</span>
+              <span className="text-lg font-bold">{formatPrice(product.price)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600">Đơn vị:</span>
               <span className="font-medium">{product.unit}</span>
+            </div>
+            {product.item_group && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">Nhóm sản phẩm:</span>
+                <span className="font-medium">{product.item_group}</span>
+              </div>
+            )}
+            <div className="flex justify-between">
+              <span className="text-gray-600">Số lượng tồn kho thực tế:</span>
+              <span className="font-medium">{product.stock ?? 0} {product.unit}</span>
             </div>
           </div>
         </section>

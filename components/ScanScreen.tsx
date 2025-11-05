@@ -131,7 +131,7 @@ const ScanScreen: React.FC<ScanScreenProps> = ({ onNavigate, user, onLogout }) =
         <div className="my-4">
           <p className="text-sm text-gray-600">Mã vạch:</p>
           <div className="bg-gray-100 p-3 rounded-md text-center w-full mt-1">
-            <span className="font-mono text-lg text-gray-800 tracking-wider">{barcode}</span>
+            <span className="font-mono text-xl font-bold text-gray-800 tracking-wider">{barcode}</span>
           </div>
         </div>
 
