@@ -18,7 +18,13 @@ const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({ product, onNa
   }, [product]);
 
   const formatPrice = (price: number) => {
-    return price.toLocaleString('vi-VN') + ' đ';
+    // Làm tròn để loại bỏ các số 0 thừa sau dấu thập phân
+    const rounded = Math.round(price * 100) / 100;
+    // Format theo chuẩn Việt Nam và loại bỏ phần thập phân nếu là số nguyên
+    return rounded.toLocaleString('vi-VN', { 
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2 
+    }) + ' đ';
   };
   
   return (

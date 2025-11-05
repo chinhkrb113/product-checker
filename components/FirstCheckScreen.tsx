@@ -23,7 +23,7 @@ const FirstCheckScreen: React.FC<FirstCheckScreenProps> = ({
     new_product_name: '',
     new_unit: '',
     new_price: '',
-    stock: '',
+    stock: '0',
     images: [] as string[]
   });
   
@@ -31,6 +31,19 @@ const FirstCheckScreen: React.FC<FirstCheckScreenProps> = ({
   const [unitSearchTerm, setUnitSearchTerm] = useState('');
   const [isUnitDropdownOpen, setIsUnitDropdownOpen] = useState(false);
   const unitDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Tự động điền thông tin từ dữ liệu cũ
+  useEffect(() => {
+    setCheckData({
+      check_result: 'correct',
+      new_product_name: product.name || '',
+      new_unit: product.unit || '',
+      new_price: product.price ? product.price.toString() : '',
+      stock: '0',
+      images: []
+    });
+    setUnitSearchTerm(product.unit || '');
+  }, [product]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -125,6 +138,16 @@ const FirstCheckScreen: React.FC<FirstCheckScreenProps> = ({
     }
   };
 
+  const formatPrice = (price: number) => {
+    // Làm tròn để loại bỏ các số 0 thừa sau dấu thập phân
+    const rounded = Math.round(price * 100) / 100;
+    // Format theo chuẩn Việt Nam và loại bỏ phần thập phân nếu là số nguyên
+    return rounded.toLocaleString('vi-VN', { 
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2 
+    }) + ' đ';
+  };
+
   const needsCorrection = checkData.check_result !== 'correct';
 
   return (
@@ -154,7 +177,7 @@ const FirstCheckScreen: React.FC<FirstCheckScreenProps> = ({
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600">Giá:</span>
-              <span className="font-medium">{product.price.toLocaleString('vi-VN')} đ</span>
+              <span className="font-medium">{formatPrice(product.price)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600">Đơn vị:</span>

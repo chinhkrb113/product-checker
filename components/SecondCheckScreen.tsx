@@ -108,7 +108,13 @@ const SecondCheckScreen: React.FC<SecondCheckScreenProps> = ({
   };
 
   const formatPrice = (price: number) => {
-    return price.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' });
+    // Làm tròn để loại bỏ các số 0 thừa sau dấu thập phân
+    const rounded = Math.round(price * 100) / 100;
+    // Format theo chuẩn Việt Nam và loại bỏ phần thập phân nếu là số nguyên
+    return rounded.toLocaleString('vi-VN', { 
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2 
+    }) + ' đ';
   };
 
   const getResultColor = (result: string | null) => {
@@ -532,7 +538,7 @@ const SecondCheckScreen: React.FC<SecondCheckScreenProps> = ({
                     {selectedProduct.new_price && (
                       <div className="flex justify-between">
                         <span className="text-gray-600">Giá mới:</span>
-                        <span className="font-medium text-blue-700">{selectedProduct.new_price.toLocaleString('vi-VN')} đ</span>
+                        <span className="font-medium text-blue-700">{formatPrice(selectedProduct.new_price)}</span>
                       </div>
                     )}
                     {selectedProduct.new_unit && (
