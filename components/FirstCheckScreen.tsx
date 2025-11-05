@@ -3,7 +3,7 @@ import { Product, Screen, User } from '../types';
 import { BackIcon, CameraIcon, CheckIcon } from './icons';
 import { UNIT_OPTIONS } from '../constants';
 
-const API_URL = 'http://localhost:3001';
+const API_URL = import.meta.env.VITE_API_URL;
 
 interface FirstCheckScreenProps {
   product: Product;

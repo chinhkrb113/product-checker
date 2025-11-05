@@ -9,7 +9,7 @@ import FirstCheckScreen from './components/FirstCheckScreen';
 import SecondCheckScreen from './components/SecondCheckScreen';
 import Toast from './components/Toast';
 
-const API_URL = 'http://localhost:3001/api';
+const API_URL = import.meta.env.VITE_API_URL + '/api';
 
 const App: React.FC = () => {
   const [screen, setScreen] = useState<Screen>('login');

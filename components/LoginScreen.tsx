@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Screen } from '../types';
+import { User } from '../types';
 
-const API_URL = 'http://localhost:3001';
+const API_URL = import.meta.env.VITE_API_URL;
 
 interface LoginScreenProps {
   onLoginSuccess: (username: string, employeeName: string) => void;

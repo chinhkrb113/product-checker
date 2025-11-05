@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Product, Screen } from '../types';
 import { BackIcon } from './icons';
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 interface ProductDetailScreenProps {
   product: Product;
   onNavigate: (screen: Screen, barcode?: string) => void;
@@ -202,14 +204,14 @@ const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({ product, onNa
                     {currentProduct.images.map((image, index) => (
                       <div key={index} className="relative aspect-square">
                         <img 
-                          src={`http://localhost:3001${image}`}
+                          src={`${API_URL}${image}`}
                           alt={`Ảnh sản phẩm ${index + 1}`}
                           className={`w-full h-full object-cover rounded-lg border-2 ${
                             currentProduct.second_check === 1 ? 'border-purple-300' : 'border-blue-300'
                           } shadow-sm cursor-pointer hover:opacity-90 transition`}
                           onClick={() => {
                             // Mở ảnh trong tab mới để xem full size
-                            window.open(`http://localhost:3001${image}`, '_blank');
+                            window.open(`${API_URL}${image}`, '_blank');
                           }}
                           onError={(e) => {
                             // Xử lý lỗi khi ảnh không tải được

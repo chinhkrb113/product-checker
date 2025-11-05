@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Product, Screen, User } from '../types';
-import { CameraIcon, ListIcon } from './icons';
+import { CameraIcon, ListIcon, CheckIcon } from './icons';
 
-const API_URL = 'http://localhost:3001';
+const API_URL = import.meta.env.VITE_API_URL;
 
 interface ScanScreenProps {
   onNavigate: (screen: Screen, barcode?: string) => void;
