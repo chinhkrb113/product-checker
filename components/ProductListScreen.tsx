@@ -21,7 +21,7 @@ const ProductListScreen: React.FC<ProductListScreenProps> = ({ onNavigate }) => 
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const formatPrice = (price: number) => {
-    return price.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' });
+    return price.toLocaleString('vi-VN') + ' đ';
   };
 
   // Tính tổng số trang

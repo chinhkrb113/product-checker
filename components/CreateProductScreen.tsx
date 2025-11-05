@@ -1,11 +1,12 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Product, Screen } from '../types';
+import { Product, Screen, User } from '../types';
 import { UNIT_OPTIONS } from '../constants';
 import { BackIcon } from './icons';
 
 interface CreateProductScreenProps {
   barcode: string;
+  user: User;
   onNavigate: (screen: Screen) => void;
   onCreateProduct: (product: Product) => void;
   showToast: (message: string, type: 'success' | 'error') => void;
@@ -17,7 +18,7 @@ interface FormErrors {
   unit?: string;
 }
 
-const CreateProductScreen: React.FC<CreateProductScreenProps> = ({ barcode, onNavigate, onCreateProduct, showToast }) => {
+const CreateProductScreen: React.FC<CreateProductScreenProps> = ({ barcode, user, onNavigate, onCreateProduct, showToast }) => {
   const [formData, setFormData] = useState({
     name: '',
     price: '',
@@ -76,6 +77,7 @@ const CreateProductScreen: React.FC<CreateProductScreenProps> = ({ barcode, onNa
                 price: Number(formData.price),
                 unit: formData.unit,
                 checked: true,
+                owner: user.username,
             };
             onCreateProduct(newProduct);
         } else {

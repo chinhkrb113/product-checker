@@ -5,6 +5,7 @@ export interface Product {
   price: number;
   unit: string;
   checked: boolean;
+  owner?: string | null;
   
   // Double-check workflow fields
   first_check?: number;

@@ -17,6 +17,7 @@ interface TabItem extends RowDataPacket {
   stock_uom: string;
   disabled: number;
   is_sales_item: number;
+  owner: string | null;
   
   // Double-check workflow fields
   first_check: number;
@@ -518,7 +519,7 @@ app.get('/api/products/:barcode', async (req, res) => {
 // API: Tạo sản phẩm mới
 app.post('/api/products', async (req, res) => {
   try {
-    const { barcode, name, price, unit } = req.body;
+    const { barcode, name, price, unit, owner } = req.body;
 
     // Validate input
     if (!barcode || !name || price === undefined || !unit) {
@@ -549,10 +550,11 @@ app.post('/api/products', async (req, res) => {
         is_fixed_asset,
         first_check,
         second_check,
+        owner,
         creation,
         modified
-      ) VALUES (?, ?, ?, ?, ?, 0, 1, 1, 0, 0, 0, NOW(), NOW())`,
-      [barcode, barcode, name, unit, price]
+      ) VALUES (?, ?, ?, ?, ?, 0, 1, 1, 0, 0, 0, ?, NOW(), NOW())`,
+      [barcode, barcode, name, unit, price, owner || null]
     );
 
     res.json({
@@ -565,7 +567,8 @@ app.post('/api/products', async (req, res) => {
         unit, 
         checked: false,
         first_check: 0,
-        second_check: 0
+        second_check: 0,
+        owner: owner || null
       }
     });
   } catch (error) {

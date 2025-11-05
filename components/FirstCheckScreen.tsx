@@ -8,7 +8,7 @@ const API_URL = 'http://localhost:3001';
 interface FirstCheckScreenProps {
   product: Product;
   user: User;
-  onNavigate: (screen: Screen) => void;
+  onNavigate: (screen: Screen, barcode?: string) => void;
   showToast: (message: string, type: 'success' | 'error') => void;
 }
 
@@ -112,7 +112,7 @@ const FirstCheckScreen: React.FC<FirstCheckScreenProps> = ({
 
       if (response.ok) {
         showToast('Hoàn thành kiểm tra lần 1 thành công!', 'success');
-        onNavigate('scan');
+        onNavigate('detail', product.barcode);
       } else {
         const error = await response.json();
         showToast(error.error || 'Có lỗi xảy ra', 'error');
@@ -130,7 +130,7 @@ const FirstCheckScreen: React.FC<FirstCheckScreenProps> = ({
   return (
     <div className="flex flex-col h-screen bg-gray-50">
       <header className="bg-white shadow-md p-4 flex items-center sticky top-0 z-10">
-        <button onClick={() => onNavigate('scan')} className="text-gray-600 mr-4">
+        <button onClick={() => onNavigate('detail', product.barcode)} className="text-gray-600 mr-4">
           <BackIcon className="w-6 h-6" />
         </button>
         <div>
