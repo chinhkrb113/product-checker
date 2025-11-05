@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { Scanner } from '@yudiel/react-qr-scanner';
 import { Product, Screen, User } from '../types';
 import { CameraIcon, ListIcon, CheckIcon } from './icons';
 
@@ -17,83 +18,56 @@ interface BarcodeScannerProps {
 }
 
 const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onScanSuccess, onClose }) => {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const intervalRef = useRef<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    // @ts-ignore - Check for BarcodeDetector API support
-    if (!('BarcodeDetector' in window)) {
-      setError('Trình duyệt của bạn không hỗ trợ quét mã vạch.');
-      return;
+  const handleScan = (result: any) => {
+    if (result && result.length > 0) {
+      const scannedCode = result[0]?.rawValue;
+      if (scannedCode) {
+        onScanSuccess(scannedCode);
+      }
     }
+  };
 
-    const setupScanner = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment' },
-          audio: false,
-        });
-        streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play();
-        }
-
-        // Clear any previous error if camera access is successful
-        setError(null);
-
-        // @ts-ignore
-        const barcodeDetector = new window.BarcodeDetector({
-          formats: ['ean_13', 'code_128', 'qr_code', 'upc_a', 'upc_e'],
-        });
-
-        intervalRef.current = window.setInterval(async () => {
-          if (videoRef.current && videoRef.current.readyState >= 2) {
-            try {
-              const barcodes = await barcodeDetector.detect(videoRef.current);
-              if (barcodes.length > 0 && barcodes[0].rawValue) {
-                onScanSuccess(barcodes[0].rawValue);
-              }
-            } catch (e) {
-              console.error('Barcode detection failed:', e);
-            }
-          }
-        }, 300);
-      } catch (err) {
-        console.error('Error accessing camera:', err);
-        setError('Không thể truy cập camera. Vui lòng cấp quyền và thử lại.');
-      }
-    };
-
-    setupScanner();
-
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
-      }
-    };
-  }, [onScanSuccess]);
+  const handleError = (error: any) => {
+    console.error('Scanner error:', error);
+    setError('Không thể truy cập camera. Vui lòng cấp quyền và thử lại.');
+  };
 
   return (
     <div className="fixed inset-0 bg-black z-50 flex flex-col items-center justify-center text-white">
-      <video ref={videoRef} className="absolute top-0 left-0 w-full h-full object-cover" muted playsInline />
-      <div className="absolute inset-0 z-10" style={{ boxShadow: '0 0 0 9999px rgba(0,0,0,0.6)' }}>
+      <div className="absolute top-0 left-0 w-full h-full">
+        <Scanner
+          onScan={handleScan}
+          onError={handleError}
+          constraints={{
+            facingMode: 'environment',
+          }}
+          styles={{
+            container: {
+              width: '100%',
+              height: '100%',
+            },
+          }}
+        />
+      </div>
+      
+      <div className="absolute inset-0 z-10 pointer-events-none" style={{ boxShadow: '0 0 0 9999px rgba(0,0,0,0.6)' }}>
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-11/12 max-w-sm h-40 border-4 border-white rounded-lg opacity-75"></div>
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 w-11/12 max-w-sm h-1 bg-red-500 animate-pulse"></div>
       </div>
+      
       <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-20 bg-gradient-to-b from-black/60 to-transparent">
         <p className="text-lg font-semibold">Hướng camera vào mã vạch</p>
-        <button onClick={onClose} className="bg-white/20 px-4 py-2 rounded-lg font-bold hover:bg-white/30 transition">
+        <button onClick={onClose} className="bg-white/20 px-4 py-2 rounded-lg font-bold hover:bg-white/30 transition pointer-events-auto">
           Hủy
         </button>
       </div>
+      
       {error && (
         <div className="absolute bottom-10 left-1/2 -translate-x-1/2 bg-red-600 p-4 rounded-lg z-20 w-11/12 max-w-sm text-center">
           <p>{error}</p>
-          <button onClick={onClose} className="mt-2 text-sm font-bold underline">Đóng</button>
+          <button onClick={onClose} className="mt-2 text-sm font-bold underline pointer-events-auto">Đóng</button>
         </div>
       )}
     </div>
