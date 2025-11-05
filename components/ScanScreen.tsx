@@ -204,31 +204,7 @@ const ScanScreen: React.FC<ScanScreenProps> = ({ onNavigate, user, onLogout }) =
         </button>
       </header>
       <main className="flex-grow p-6 flex flex-col justify-center items-center">
-        {/* Check Workflow Menu */}
-        <div className="w-full mb-6 bg-gradient-to-r from-orange-500 to-red-500 rounded-xl p-1 shadow-lg">
-          <div className="bg-white rounded-lg p-4">
-            <h2 className="text-sm font-bold text-gray-800 mb-3 flex items-center">
-              <svg className="w-5 h-5 mr-2 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
-              Check Workflow
-            </h2>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => onNavigate('check-dashboard')}
-                className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white py-3 px-3 rounded-lg text-sm font-semibold hover:from-purple-600 hover:to-indigo-600 transition shadow-md"
-              >
-                📊 Thống kê
-              </button>
-              <button
-                onClick={() => onNavigate('second-check')}
-                className="bg-gradient-to-r from-green-500 to-teal-500 text-white py-3 px-3 rounded-lg text-sm font-semibold hover:from-green-600 hover:to-teal-600 transition shadow-md"
-              >
-                ✓ Duyệt check
-              </button>
-            </div>
-          </div>
-        </div>
+
 
         <button
           onClick={() => onNavigate('list')}

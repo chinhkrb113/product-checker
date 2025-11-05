@@ -12,6 +12,10 @@ dist
 dist-ssr
 .env.local
 
+# Image uploads
+image_upload/*
+!image_upload/.gitkeep
+
 
 # Editor directories and files
 .vscode/*

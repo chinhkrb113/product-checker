@@ -1,110 +1,141 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Product, Screen, User } from '../types';
-import { BackIcon, CheckIcon, SearchIcon } from './icons';
+import { BackIcon, CameraIcon, CheckIcon } from './icons';
+import { UNIT_OPTIONS } from '../constants';
 
 const API_URL = 'http://localhost:3001';
 
 interface SecondCheckScreenProps {
+  product: Product;
   user: User;
-  onNavigate: (screen: Screen) => void;
+  onNavigate: (screen: Screen, barcode?: string) => void;
   showToast: (message: string, type: 'success' | 'error') => void;
 }
 
 const SecondCheckScreen: React.FC<SecondCheckScreenProps> = ({ 
+  product, 
   user, 
   onNavigate, 
   showToast 
 }) => {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [processing, setProcessing] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [resultFilter, setResultFilter] = useState<'all' | 'correct' | 'needs_correction' | 'incorrect'>('all');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [checkData, setCheckData] = useState({
+    check_result: 'correct' as 'correct' | 'needs_correction' | 'incorrect',
+    new_product_name: '',
+    new_unit: '',
+    new_price: '',
+    stock: '0',
+    images: [] as string[]
+  });
   
-  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [unitSearchTerm, setUnitSearchTerm] = useState('');
+  const [isUnitDropdownOpen, setIsUnitDropdownOpen] = useState(false);
+  const unitDropdownRef = useRef<HTMLDivElement>(null);
 
+  // QUAN TRỌNG: Tự động điền thông tin từ dữ liệu check lần 1 (nếu có) HOẶC dữ liệu gốc
   useEffect(() => {
-    fetchPendingProducts();
-  }, []);
+    setCheckData({
+      check_result: 'correct',
+      new_product_name: product.new_product_name || product.name || '',
+      new_unit: product.new_unit || product.unit || '',
+      new_price: product.new_price ? product.new_price.toString() : product.price ? product.price.toString() : '',
+      stock: product.stock !== undefined && product.stock !== null ? product.stock.toString() : '0',
+      images: []
+    });
+    setUnitSearchTerm(product.new_unit || product.unit || '');
+  }, [product]);
 
-  // Handle search với debounce
+  // Close dropdown when clicking outside
   useEffect(() => {
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
-
-    searchTimeoutRef.current = setTimeout(() => {
-      setCurrentPage(1);
-    }, 300);
-
-    return () => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
+    const handleClickOutside = (event: MouseEvent) => {
+      if (unitDropdownRef.current && !unitDropdownRef.current.contains(event.target as Node)) {
+        setIsUnitDropdownOpen(false);
       }
     };
-  }, [searchTerm]);
 
-  const fetchPendingProducts = async () => {
-    try {
-      const response = await fetch(`${API_URL}/api/products/pending-second-check`);
-      if (response.ok) {
-        const data = await response.json();
-        setProducts(data);
-      }
-    } catch (error) {
-      console.error('Error fetching pending products:', error);
-      showToast('Không thể tải danh sách sản phẩm', 'error');
-    } finally {
-      setLoading(false);
-    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Filter units based on search term
+  const filteredUnits = UNIT_OPTIONS.filter(unit =>
+    unit.toLowerCase().includes(unitSearchTerm.toLowerCase())
+  );
+
+  const handleUnitSelect = (unit: string) => {
+    setCheckData({ ...checkData, new_unit: unit });
+    setUnitSearchTerm(unit);
+    setIsUnitDropdownOpen(false);
   };
 
-  const handleApprove = async (approved: boolean) => {
-    if (!selectedProduct) return;
+  const handleImageCapture = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.capture = 'environment';
     
-    setProcessing(true);
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        if (checkData.images.length >= 3) {
+          showToast('Chỉ được tải tối đa 3 ảnh', 'error');
+          return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = () => {
+          setCheckData(prev => ({
+            ...prev,
+            images: [...prev.images, reader.result as string]
+          }));
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+    
+    input.click();
+  };
+
+  const handleRemoveImage = (index: number) => {
+    setCheckData(prev => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleSubmit = async () => {
+    setLoading(true);
     
     try {
-      const response = await fetch(
-        `${API_URL}/api/products/${selectedProduct.barcode}/second-check`,
-        {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            checked_by: user.username,
-            approved
-          })
-        }
-      );
+      const response = await fetch(`${API_URL}/api/products/${product.barcode}/second-check`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          checked_by: user.username,
+          check_result: checkData.check_result,
+          new_product_name: checkData.check_result !== 'correct' ? checkData.new_product_name : null,
+          new_unit: checkData.check_result !== 'correct' ? checkData.new_unit : null,
+          new_price: checkData.check_result !== 'correct' && checkData.new_price ? parseFloat(checkData.new_price) : null,
+          stock: checkData.stock ? parseInt(checkData.stock) : null,
+          image_1: checkData.images[0] || null,
+          image_2: checkData.images[1] || null,
+          image_3: checkData.images[2] || null
+        })
+      });
 
       if (response.ok) {
-        showToast(
-          approved ? 'Đã phê duyệt thành công!' : 'Đã từ chối và reset về pending',
-          'success'
-        );
-        
-        // Remove from list and clear selection
-        setProducts(products.filter(p => p.barcode !== selectedProduct.barcode));
-        setSelectedProduct(null);
+        showToast('Hoàn thành kiểm tra lần 2 thành công!', 'success');
+        onNavigate('detail', product.barcode);
       } else {
         const error = await response.json();
         showToast(error.error || 'Có lỗi xảy ra', 'error');
       }
     } catch (error) {
-      console.error('Error in second check:', error);
+      console.error('Error submitting second check:', error);
       showToast('Không thể kết nối đến server', 'error');
     } finally {
-      setProcessing(false);
+      setLoading(false);
     }
-  };
-
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleString('vi-VN');
   };
 
   const formatPrice = (price: number) => {
@@ -117,495 +148,248 @@ const SecondCheckScreen: React.FC<SecondCheckScreenProps> = ({
     }) + ' đ';
   };
 
-  const getResultColor = (result: string | null) => {
-    switch (result) {
-      case 'correct': return 'bg-green-100 text-green-800';
-      case 'needs_correction': return 'bg-orange-100 text-orange-800';
-      case 'incorrect': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getResultLabel = (result: string | null) => {
-    switch (result) {
-      case 'correct': return '✓ Đúng';
-      case 'needs_correction': return '⚠ Cần sửa';
-      case 'incorrect': return '✗ Sai';
-      default: return 'N/A';
-    }
-  };
-
-  // Filter products
-  const filteredProducts = products.filter(p => {
-    // Search filter
-    const matchesSearch = searchTerm === '' || 
-      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.barcode.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    // Result filter
-    const matchesResult = resultFilter === 'all' || p.check_result === resultFilter;
-    
-    return matchesSearch && matchesResult;
-  });
-
-  // Pagination
-  const totalPages = Math.ceil(filteredProducts.length / pageSize);
-  const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = startIndex + pageSize;
-  const paginatedProducts = filteredProducts.slice(startIndex, endIndex);
-
-  // Generate page numbers to display
-  const getPageNumbers = () => {
-    const pages: (number | string)[] = [];
-    const maxVisible = 5;
-
-    if (totalPages <= maxVisible) {
-      for (let i = 1; i <= totalPages; i++) {
-        pages.push(i);
-      }
-    } else {
-      if (currentPage <= 3) {
-        for (let i = 1; i <= 4; i++) pages.push(i);
-        pages.push('...');
-        pages.push(totalPages);
-      } else if (currentPage >= totalPages - 2) {
-        pages.push(1);
-        pages.push('...');
-        for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
-      } else {
-        pages.push(1);
-        pages.push('...');
-        for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
-        pages.push('...');
-        pages.push(totalPages);
-      }
-    }
-
-    return pages;
-  };
-
-  const handlePageSizeChange = (newSize: number) => {
-    setPageSize(newSize);
-    setCurrentPage(1);
-  };
-
-  if (loading) {
-    return (
-      <div className="flex flex-col h-screen items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-        <p className="mt-4 text-gray-600">Đang tải...</p>
-      </div>
-    );
-  }
+  const needsCorrection = checkData.check_result !== 'correct';
 
   return (
     <div className="flex flex-col h-screen bg-gray-50">
       <header className="bg-white shadow-md p-4 flex items-center sticky top-0 z-10">
-        <button onClick={() => onNavigate('scan')} className="text-gray-600 mr-4">
+        <button onClick={() => onNavigate('detail', product.barcode)} className="text-gray-600 mr-4">
           <BackIcon className="w-6 h-6" />
         </button>
         <div>
-          <h1 className="text-xl font-bold text-gray-800">Duyệt kiểm tra lần 2</h1>
-          <p className="text-xs text-gray-600">Supervisor: {user.employeeName}</p>
+          <h1 className="text-xl font-bold text-gray-800">Kiểm tra lần 2</h1>
+          <p className="text-xs text-gray-600">{user.employeeName}</p>
         </div>
       </header>
 
-      <div className="p-4 sticky top-[88px] bg-white z-10 border-b space-y-3">
-        {/* Search bar */}
-        <div className="relative">
-          <input
-            type="text"
-            placeholder="Tìm theo tên hoặc mã vạch..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-            <SearchIcon className="w-5 h-5" />
+      <main className="flex-grow overflow-y-auto p-4 pb-28">
+        {/* Thông tin sản phẩm hiện tại */}
+        <section className="bg-white rounded-lg p-4 mb-4 shadow-sm">
+          <h2 className="text-lg font-semibold text-gray-700 mb-3">Thông tin hiện tại</h2>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-gray-600">Mã vạch:</span>
+              <span className="font-mono font-semibold">{product.barcode}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Tên sản phẩm:</span>
+              <span className="font-medium">{product.name}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Giá:</span>
+              <span className="font-medium">{formatPrice(product.price)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Đơn vị:</span>
+              <span className="font-medium">{product.unit}</span>
+            </div>
           </div>
-        </div>
+        </section>
 
-        {/* Filter buttons */}
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            onClick={() => setResultFilter('all')}
-            className={`py-2 px-3 rounded-lg font-semibold text-sm transition ${
-              resultFilter === 'all'
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            Tất cả ({products.length})
-          </button>
-          <button
-            onClick={() => setResultFilter('correct')}
-            className={`py-2 px-3 rounded-lg font-semibold text-sm transition ${
-              resultFilter === 'correct'
-                ? 'bg-green-600 text-white shadow-md'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            ✓ Đúng ({products.filter(p => p.check_result === 'correct').length})
-          </button>
-          <button
-            onClick={() => setResultFilter('needs_correction')}
-            className={`py-2 px-3 rounded-lg font-semibold text-sm transition ${
-              resultFilter === 'needs_correction'
-                ? 'bg-orange-600 text-white shadow-md'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            ⚠ Cần sửa ({products.filter(p => p.check_result === 'needs_correction').length})
-          </button>
-          <button
-            onClick={() => setResultFilter('incorrect')}
-            className={`py-2 px-3 rounded-lg font-semibold text-sm transition ${
-              resultFilter === 'incorrect'
-                ? 'bg-red-600 text-white shadow-md'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            ✗ Sai ({products.filter(p => p.check_result === 'incorrect').length})
-          </button>
-        </div>
-      </div>
-
-      <main className="flex-1 overflow-y-auto p-4">
-        {products.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full p-6 text-center">
-            <div className="text-6xl mb-4">✅</div>
-            <h2 className="text-xl font-bold text-gray-800 mb-2">
-              Không có sản phẩm nào cần duyệt
-            </h2>
-            <p className="text-gray-600">
-              Tất cả sản phẩm đã được kiểm tra và duyệt
-            </p>
+        {/* Kết quả kiểm tra */}
+        <section className="bg-white rounded-lg p-4 mb-4 shadow-sm">
+          <label className="block text-sm font-semibold text-gray-700 mb-3">
+            Kết quả kiểm tra *
+          </label>
+          <div className="space-y-2">
+            <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition">
+              <input
+                type="radio"
+                name="check_result"
+                value="correct"
+                checked={checkData.check_result === 'correct'}
+                onChange={(e) => setCheckData({ ...checkData, check_result: 'correct' })}
+                className="mr-3 w-4 h-4"
+              />
+              <div>
+                <div className="font-medium text-green-700">✓ Đúng</div>
+                <div className="text-xs text-gray-500">Thông tin chính xác, không cần sửa</div>
+              </div>
+            </label>
+            
+            <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition">
+              <input
+                type="radio"
+                name="check_result"
+                value="needs_correction"
+                checked={checkData.check_result === 'needs_correction'}
+                onChange={(e) => setCheckData({ ...checkData, check_result: 'needs_correction' })}
+                className="mr-3 w-4 h-4"
+              />
+              <div>
+                <div className="font-medium text-orange-700">⚠ Cần sửa</div>
+                <div className="text-xs text-gray-500">Có thông tin sai, cần cập nhật</div>
+              </div>
+            </label>
           </div>
-        ) : (
-          <>
-            {/* Search result info */}
-            {searchTerm && (
-              <div className="mb-3 text-sm text-gray-600">
-                Tìm thấy <strong>{filteredProducts.length}</strong> sản phẩm
-              </div>
-            )}
+        </section>
 
-            {/* Page size selector */}
-            <div className="mb-4 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600">Hiển thị:</span>
-                <select
-                  value={pageSize}
-                  onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-                  className="border border-gray-300 rounded-lg px-3 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value={10}>10</option>
-                  <option value={20}>20</option>
-                  <option value={50}>50</option>
-                  <option value={100}>100</option>
-                </select>
-                <span className="text-sm text-gray-600">sản phẩm/trang</span>
+        {/* Thông tin mới (chỉ hiện khi cần sửa) */}
+        {needsCorrection && (
+          <section className="bg-white rounded-lg p-4 mb-4 shadow-sm">
+            <h2 className="text-lg font-semibold text-gray-700 mb-3">Thông tin mới</h2>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Tên sản phẩm mới
+                </label>
+                <input
+                  type="text"
+                  placeholder="Nhập tên mới (nếu có)"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  value={checkData.new_product_name}
+                  onChange={(e) => setCheckData({ ...checkData, new_product_name: e.target.value })}
+                />
               </div>
-              <div className="text-sm text-gray-600">
-                Tổng: <strong>{filteredProducts.length}</strong> sản phẩm
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Giá mới
+                </label>
+                <input
+                  type="number"
+                  placeholder="Nhập giá mới (nếu có)"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  value={checkData.new_price}
+                  onChange={(e) => setCheckData({ ...checkData, new_price: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Đơn vị mới
+                </label>
+                <div className="relative" ref={unitDropdownRef}>
+                  <input
+                    type="text"
+                    placeholder="Chọn hoặc tìm đơn vị..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    value={unitSearchTerm}
+                    onChange={(e) => {
+                      setUnitSearchTerm(e.target.value);
+                      setCheckData({ ...checkData, new_unit: e.target.value });
+                      setIsUnitDropdownOpen(true);
+                    }}
+                    onFocus={() => setIsUnitDropdownOpen(true)}
+                  />
+                  
+                  {/* Dropdown icon */}
+                  <button
+                    type="button"
+                    onClick={() => setIsUnitDropdownOpen(!isUnitDropdownOpen)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+
+                  {/* Dropdown menu */}
+                  {isUnitDropdownOpen && (
+                    <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                      {filteredUnits.length > 0 ? (
+                        filteredUnits.map((unit, index) => (
+                          <button
+                            key={index}
+                            type="button"
+                            onClick={() => handleUnitSelect(unit)}
+                            className="w-full text-left px-3 py-2 hover:bg-blue-50 transition border-b border-gray-100 last:border-b-0"
+                          >
+                            <span className={`${checkData.new_unit === unit ? 'font-semibold text-blue-600' : 'text-gray-700'}`}>
+                              {unit}
+                            </span>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="px-3 py-2 text-gray-500 text-sm">
+                          Không tìm thấy đơn vị phù hợp
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-
-            {filteredProducts.length > 0 ? (
-              <>
-                {/* Pagination controls - Top */}
-                {totalPages > 1 && (
-                  <div className="mb-4">
-                    <div className="flex items-center justify-center gap-2 flex-wrap">
-                      {/* Previous button */}
-                      <button
-                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                        disabled={currentPage === 1}
-                        className="px-4 py-2 rounded-lg font-semibold text-sm transition disabled:opacity-50 disabled:cursor-not-allowed bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:hover:bg-gray-100"
-                      >
-                        ← Trước
-                      </button>
-
-                      {/* Page numbers */}
-                      {getPageNumbers().map((pageNum, index) => (
-                        pageNum === '...' ? (
-                          <span key={`ellipsis-top-${index}`} className="px-2 text-gray-500">...</span>
-                        ) : (
-                          <button
-                            key={`top-${pageNum}`}
-                            onClick={() => setCurrentPage(pageNum as number)}
-                            className={`px-4 py-2 rounded-lg font-semibold text-sm transition ${
-                              currentPage === pageNum
-                                ? 'bg-blue-600 text-white shadow-md'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                            }`}
-                          >
-                            {pageNum}
-                          </button>
-                        )
-                      ))}
-
-                      {/* Next button */}
-                      <button
-                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                        disabled={currentPage === totalPages}
-                        className="px-4 py-2 rounded-lg font-semibold text-sm transition disabled:opacity-50 disabled:cursor-not-allowed bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:hover:bg-gray-100"
-                      >
-                        Sau →
-                      </button>
-                    </div>
-                    
-                    {/* Page info */}
-                    <div className="text-center mt-3 text-sm text-gray-600">
-                      Trang {currentPage} / {totalPages}
-                    </div>
-                  </div>
-                )}
-
-                {/* Product list */}
-                <ul className="space-y-3">
-                  {paginatedProducts.map(product => (
-                    <li key={product.barcode}>
-                      <button
-                        onClick={() => setSelectedProduct(product)}
-                        className={`w-full text-left p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition duration-200 border-2 ${
-                          selectedProduct?.barcode === product.barcode
-                            ? 'border-blue-500 bg-blue-50'
-                            : 'border-gray-200'
-                        }`}
-                      >
-                        <div className="flex justify-between items-start mb-2">
-                          <div className="flex-1">
-                            <p className="font-bold text-gray-800">{product.name}</p>
-                            <p className="text-sm text-gray-500">Mã vạch: {product.barcode}</p>
-                          </div>
-                          <span className={`px-3 py-1 text-xs font-semibold rounded-full whitespace-nowrap ml-2 ${getResultColor(product.check_result || null)}`}>
-                            {getResultLabel(product.check_result || null)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center text-sm">
-                          <span className="text-gray-600">
-                            Giá: <strong className="text-gray-800">{formatPrice(product.price)}</strong> / {product.unit}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            👤 {product.checked_by}
-                          </span>
-                        </div>
-                        {product.check_result === 'needs_correction' && (
-                          <div className="mt-2 pt-2 border-t border-gray-200">
-                            <span className="text-xs text-orange-600">
-                              💡 Có thông tin mới đề xuất
-                            </span>
-                          </div>
-                        )}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-
-                {/* Pagination controls - Bottom */}
-                {totalPages > 1 && (
-                  <div className="mt-6 mb-4">
-                    <div className="flex items-center justify-center gap-2 flex-wrap">
-                      {/* Previous button */}
-                      <button
-                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                        disabled={currentPage === 1}
-                        className="px-4 py-2 rounded-lg font-semibold text-sm transition disabled:opacity-50 disabled:cursor-not-allowed bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:hover:bg-gray-100"
-                      >
-                        ← Trước
-                      </button>
-
-                      {/* Page numbers */}
-                      {getPageNumbers().map((pageNum, index) => (
-                        pageNum === '...' ? (
-                          <span key={`ellipsis-bottom-${index}`} className="px-2 text-gray-500">...</span>
-                        ) : (
-                          <button
-                            key={`bottom-${pageNum}`}
-                            onClick={() => setCurrentPage(pageNum as number)}
-                            className={`px-4 py-2 rounded-lg font-semibold text-sm transition ${
-                              currentPage === pageNum
-                                ? 'bg-blue-600 text-white shadow-md'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                            }`}
-                          >
-                            {pageNum}
-                          </button>
-                        )
-                      ))}
-
-                      {/* Next button */}
-                      <button
-                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                        disabled={currentPage === totalPages}
-                        className="px-4 py-2 rounded-lg font-semibold text-sm transition disabled:opacity-50 disabled:cursor-not-allowed bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:hover:bg-gray-100"
-                      >
-                        Sau →
-                      </button>
-                    </div>
-                    
-                    {/* Page info */}
-                    <div className="text-center mt-3 text-sm text-gray-600">
-                      Trang {currentPage} / {totalPages}
-                    </div>
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="text-center py-10">
-                <p className="text-gray-500">
-                  {searchTerm || resultFilter !== 'all' 
-                    ? 'Không tìm thấy sản phẩm nào phù hợp với bộ lọc.'
-                    : 'Không có sản phẩm nào.'
-                  }
-                </p>
-              </div>
-            )}
-          </>
+          </section>
         )}
+
+        {/* Tồn kho */}
+        <section className="bg-white rounded-lg p-4 mb-4 shadow-sm">
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            Tồn kho thực tế
+          </label>
+          <input
+            type="number"
+            placeholder="Nhập số lượng tồn kho"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            value={checkData.stock}
+            onChange={(e) => setCheckData({ ...checkData, stock: e.target.value })}
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Đếm số lượng sản phẩm thực tế trên kệ
+          </p>
+        </section>
+
+        {/* Chụp ảnh */}
+        <section className="bg-white rounded-lg p-4 mb-4 shadow-sm">
+          <label className="block text-sm font-semibold text-gray-700 mb-3">
+            Chụp ảnh sản phẩm ({checkData.images.length}/3)
+          </label>
+          
+          <button
+            onClick={handleImageCapture}
+            disabled={checkData.images.length >= 3}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition"
+          >
+            <CameraIcon className="w-5 h-5" />
+            {checkData.images.length >= 3 ? 'Đã đủ 3 ảnh' : 'Chụp ảnh'}
+          </button>
+
+          {checkData.images.length > 0 && (
+            <div className="grid grid-cols-3 gap-2 mt-3">
+              {checkData.images.map((img, i) => (
+                <div key={i} className="relative">
+                  <img 
+                    src={img} 
+                    alt={`Ảnh ${i + 1}`} 
+                    className="w-full h-24 object-cover rounded-lg border"
+                  />
+                  <button
+                    onClick={() => handleRemoveImage(i)}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600 transition"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
       </main>
 
-      {/* Detail Modal */}
-      {selectedProduct && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-20 flex items-end md:items-center justify-center p-0 md:p-4">
-          <div className="bg-white w-full md:w-2/3 lg:w-1/2 rounded-t-2xl md:rounded-2xl max-h-[90vh] overflow-y-auto">
-            {/* Modal Header */}
-            <div className="sticky top-0 bg-white border-b p-4 flex items-center justify-between z-10">
-              <h2 className="text-lg font-bold text-gray-800">Chi tiết kiểm tra</h2>
-              <button
-                onClick={() => setSelectedProduct(null)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            <div className="p-4 space-y-4">
-              {/* Thông tin check */}
-              <div className="bg-white rounded-lg p-4 border shadow-sm">
-                <h3 className="font-semibold text-gray-700 mb-3">Thông tin check</h3>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Người check:</span>
-                    <span className="font-medium">{selectedProduct.checked_by}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Thời gian:</span>
-                    <span className="font-medium">{formatDate(selectedProduct.checked_at || null)}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600">Kết quả:</span>
-                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getResultColor(selectedProduct.check_result || null)}`}>
-                      {getResultLabel(selectedProduct.check_result || null)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Thông tin gốc */}
-              <div className="bg-white rounded-lg p-4 border shadow-sm">
-                <h3 className="font-semibold text-gray-700 mb-3">Thông tin gốc</h3>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Tên:</span>
-                    <span className="font-medium">{selectedProduct.name}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Giá:</span>
-                    <span className="font-medium">{formatPrice(selectedProduct.price)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Đơn vị:</span>
-                    <span className="font-medium">{selectedProduct.unit}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Thông tin mới (nếu có) */}
-              {selectedProduct.check_result === 'needs_correction' && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 shadow-sm">
-                  <h3 className="font-semibold text-blue-800 mb-3">Thông tin mới đề xuất</h3>
-                  <div className="space-y-2 text-sm">
-                    {selectedProduct.new_product_name && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Tên mới:</span>
-                        <span className="font-medium text-blue-700">{selectedProduct.new_product_name}</span>
-                      </div>
-                    )}
-                    {selectedProduct.new_price && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Giá mới:</span>
-                        <span className="font-medium text-blue-700">{formatPrice(selectedProduct.new_price)}</span>
-                      </div>
-                    )}
-                    {selectedProduct.new_unit && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Đơn vị mới:</span>
-                        <span className="font-medium text-blue-700">{selectedProduct.new_unit}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Tồn kho */}
-              {selectedProduct.stock !== undefined && selectedProduct.stock !== null && (
-                <div className="bg-white rounded-lg p-4 border shadow-sm">
-                  <h3 className="font-semibold text-gray-700 mb-3">Tồn kho</h3>
-                  <div className="text-2xl font-bold text-gray-800">
-                    {selectedProduct.stock} {selectedProduct.new_unit || selectedProduct.unit}
-                  </div>
-                </div>
-              )}
-
-              {/* Hình ảnh */}
-              {selectedProduct.images && selectedProduct.images.length > 0 && (
-                <div className="bg-white rounded-lg p-4 border shadow-sm">
-                  <h3 className="font-semibold text-gray-700 mb-3">Hình ảnh ({selectedProduct.images.length})</h3>
-                  <div className="grid grid-cols-3 gap-2">
-                    {selectedProduct.images.map((img, i) => (
-                      <img
-                        key={i}
-                        src={img}
-                        alt={`Ảnh ${i + 1}`}
-                        className="w-full h-24 object-cover rounded-lg border cursor-pointer hover:opacity-75 transition"
-                        onClick={() => window.open(img, '_blank')}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Nút duyệt */}
-              <div className="sticky bottom-0 pt-4 pb-2">
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => handleApprove(false)}
-                    disabled={processing}
-                    className="flex-1 py-3 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 disabled:bg-gray-400 transition flex items-center justify-center"
-                  >
-                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                    Từ chối
-                  </button>
-                  <button
-                    onClick={() => handleApprove(true)}
-                    disabled={processing}
-                    className="flex-1 py-3 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 disabled:bg-gray-400 transition flex items-center justify-center"
-                  >
-                    <CheckIcon className="w-5 h-5 mr-2" />
-                    Phê duyệt
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Footer button */}
+      <footer className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white p-4 border-t border-gray-200 z-10 shadow-lg">
+        <button
+          onClick={handleSubmit}
+          disabled={loading}
+          className="w-full py-3 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition duration-300 flex justify-center items-center"
+        >
+          {loading ? (
+            <>
+              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Đang lưu...
+            </>
+          ) : (
+            <>
+              <CheckIcon className="w-5 h-5 mr-2" />
+              Hoàn thành kiểm tra lần 2
+            </>
+          )}
+        </button>
+      </footer>
     </div>
   );
 };

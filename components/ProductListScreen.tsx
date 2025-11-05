@@ -12,7 +12,7 @@ interface ProductListScreenProps {
 const ProductListScreen: React.FC<ProductListScreenProps> = ({ onNavigate }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'unchecked' | 'first-checked' | 'completed'>('all');
+  const [statusFilter, setStatusFilter] = useState<'unchecked' | 'first-checked' | 'completed'>('unchecked');
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -33,15 +33,15 @@ const ProductListScreen: React.FC<ProductListScreenProps> = ({ onNavigate }) => 
   // Tính tổng số trang
   const totalPages = Math.ceil(totalProducts / pageSize);
 
-  // Fetch products từ API
-  const fetchProducts = useCallback(async (page: number, search: string = '') => {
+  // Fetch products từ API theo filter
+  const fetchProducts = useCallback(async (page: number, search: string = '', status: 'unchecked' | 'first-checked' | 'completed' = 'unchecked') => {
     try {
       setLoading(true);
 
       const offset = (page - 1) * pageSize;
-      const url = search.trim() 
-        ? `${API_URL}/api/products/search?q=${encodeURIComponent(search)}&limit=${pageSize}&offset=${offset}`
-        : `${API_URL}/api/products?limit=${pageSize}&offset=${offset}`;
+      
+      // Gọi API filter với status
+      const url = `${API_URL}/api/products/filter?status=${status}&q=${encodeURIComponent(search)}&limit=${pageSize}&offset=${offset}`;
 
       const response = await fetch(url);
       
@@ -69,7 +69,7 @@ const ProductListScreen: React.FC<ProductListScreenProps> = ({ onNavigate }) => 
 
   // Load initial products
   useEffect(() => {
-    fetchProducts(1, searchTerm);
+    fetchProducts(1, searchTerm, statusFilter);
   }, []);
 
   // Handle search với debounce
@@ -80,7 +80,7 @@ const ProductListScreen: React.FC<ProductListScreenProps> = ({ onNavigate }) => 
 
     searchTimeoutRef.current = setTimeout(() => {
       setCurrentPage(1);
-      fetchProducts(1, searchTerm);
+      fetchProducts(1, searchTerm, statusFilter);
     }, 500);
 
     return () => {
@@ -88,21 +88,15 @@ const ProductListScreen: React.FC<ProductListScreenProps> = ({ onNavigate }) => 
         clearTimeout(searchTimeoutRef.current);
       }
     };
-  }, [searchTerm, fetchProducts]);
+  }, [searchTerm, statusFilter, fetchProducts]);
 
   // Handle page change
   useEffect(() => {
-    fetchProducts(currentPage, searchTerm);
+    fetchProducts(currentPage, searchTerm, statusFilter);
   }, [currentPage, pageSize, fetchProducts]);
   
-  // Filter by status
-  const filteredProducts = products.filter(p => {
-    if (statusFilter === 'all') return true;
-    if (statusFilter === 'unchecked') return !p.first_check || p.first_check === 0;
-    if (statusFilter === 'first-checked') return p.first_check === 1 && (!p.second_check || p.second_check === 0);
-    if (statusFilter === 'completed') return p.first_check === 1 && p.second_check === 1;
-    return true;
-  });
+  // Không cần filter nữa vì đã filter từ API
+  const filteredProducts = products;
 
   // Handle page size change
   const handlePageSizeChange = (newSize: number) => {
@@ -163,47 +157,46 @@ const ProductListScreen: React.FC<ProductListScreenProps> = ({ onNavigate }) => 
           </div>
         </div>
 
-        {/* Filter buttons */}
-        <div className="grid grid-cols-2 gap-2">
+        {/* Filter buttons - Chỉ 3 nút, không count */}
+        <div className="grid grid-cols-3 gap-2">
           <button
-            onClick={() => setStatusFilter('all')}
-            className={`py-2 px-3 rounded-lg font-semibold text-sm transition ${
-              statusFilter === 'all'
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            Tất cả ({products.length})
-          </button>
-          <button
-            onClick={() => setStatusFilter('unchecked')}
+            onClick={() => {
+              setStatusFilter('unchecked');
+              setCurrentPage(1);
+            }}
             className={`py-2 px-3 rounded-lg font-semibold text-sm transition ${
               statusFilter === 'unchecked'
                 ? 'bg-gray-600 text-white shadow-md'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
-            Chưa check ({products.filter(p => !p.first_check || p.first_check === 0).length})
+            Chưa check
           </button>
           <button
-            onClick={() => setStatusFilter('first-checked')}
+            onClick={() => {
+              setStatusFilter('first-checked');
+              setCurrentPage(1);
+            }}
             className={`py-2 px-3 rounded-lg font-semibold text-sm transition ${
               statusFilter === 'first-checked'
                 ? 'bg-blue-600 text-white shadow-md'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
-            ⚡ Check 1 lần ({products.filter(p => p.first_check === 1 && (!p.second_check || p.second_check === 0)).length})
+            Check lần 1
           </button>
           <button
-            onClick={() => setStatusFilter('completed')}
+            onClick={() => {
+              setStatusFilter('completed');
+              setCurrentPage(1);
+            }}
             className={`py-2 px-3 rounded-lg font-semibold text-sm transition ${
               statusFilter === 'completed'
                 ? 'bg-green-600 text-white shadow-md'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
-            ✓ Hoàn thành ({products.filter(p => p.first_check === 1 && p.second_check === 1).length})
+            Check lần 2
           </button>
         </div>
       </div>
@@ -398,7 +391,7 @@ const ProductListScreen: React.FC<ProductListScreenProps> = ({ onNavigate }) => 
         ) : (
           <div className="text-center py-10">
             <p className="text-gray-500">
-              {searchTerm || statusFilter !== 'all' 
+              {searchTerm || statusFilter 
                 ? 'Không tìm thấy sản phẩm nào phù hợp với bộ lọc.'
                 : 'Không có sản phẩm nào.'
               }

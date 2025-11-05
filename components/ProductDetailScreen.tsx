@@ -43,7 +43,7 @@ const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({ product, onNa
         </span>
       </header>
       
-      <main className="flex-grow overflow-y-auto p-6 space-y-6 bg-gray-50 pb-28">
+      <main className="flex-grow overflow-y-auto p-6 space-y-6 bg-gray-50 pb-48">
         <section>
           <h2 className="text-lg font-semibold text-gray-700 mb-2">Thông tin hiện tại</h2>
           <div className="bg-gray-100 p-4 rounded-lg space-y-2 text-gray-800 border border-gray-200">
@@ -80,11 +80,33 @@ const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({ product, onNa
           </div>
         </section>
 
-        {/* Chi tiết kiểm tra lần 1 */}
-        {currentProduct.first_check === 1 && (
+        {/* Chi tiết kiểm tra - Hiển thị thông tin check mới nhất */}
+        {(currentProduct.first_check === 1 || currentProduct.second_check === 1) && (
           <section>
-            <h2 className="text-lg font-semibold text-gray-700 mb-2">Chi tiết kiểm tra lần 1</h2>
-            <div className="bg-white p-4 rounded-lg space-y-3 border border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-700 mb-2 flex items-center gap-2">
+              Chi tiết kiểm tra
+              {currentProduct.second_check === 1 && (
+                <span className="text-xs font-normal px-2 py-1 bg-purple-100 text-purple-700 rounded">
+                  Lần 2
+                </span>
+              )}
+              {currentProduct.first_check === 1 && currentProduct.second_check !== 1 && (
+                <span className="text-xs font-normal px-2 py-1 bg-orange-100 text-orange-700 rounded">
+                  Lần 1
+                </span>
+              )}
+            </h2>
+            <div className={`p-4 rounded-lg space-y-3 border-2 ${
+              currentProduct.second_check === 1 
+                ? 'bg-purple-50 border-purple-200' 
+                : 'bg-white border-gray-200'
+            }`}>
+              {currentProduct.second_check === 1 && (
+                <div className="text-xs text-purple-600 font-medium mb-2">
+                
+                </div>
+              )}
+              
               {/* Người kiểm tra */}
               {currentProduct.checked_by && (
                 <div className="flex items-start">
@@ -128,23 +150,31 @@ const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({ product, onNa
               {currentProduct.check_result !== 'correct' && (
                 <>
                   {currentProduct.new_product_name && (
-                    <div className="flex items-start pt-2 border-t border-gray-100">
+                    <div className={`flex items-start pt-2 ${
+                      currentProduct.second_check === 1 ? 'border-t border-purple-200' : 'border-t border-gray-100'
+                    }`}>
                       <span className="font-medium text-gray-700 min-w-[120px]">Tên mới:</span>
-                      <span className="text-blue-700 font-medium">{currentProduct.new_product_name}</span>
+                      <span className={`font-medium ${
+                        currentProduct.second_check === 1 ? 'text-purple-700' : 'text-blue-700'
+                      }`}>{currentProduct.new_product_name}</span>
                     </div>
                   )}
             
                   {currentProduct.new_price && (
                     <div className="flex items-start">
                       <span className="font-medium text-gray-700 min-w-[120px]">Giá mới:</span>
-                      <span className="text-blue-700 font-medium">{formatPrice(currentProduct.new_price)}</span>
+                      <span className={`font-medium ${
+                        currentProduct.second_check === 1 ? 'text-purple-700' : 'text-blue-700'
+                      }`}>{formatPrice(currentProduct.new_price)}</span>
                     </div>
                   )}
                                     
                   {currentProduct.new_unit && (
                     <div className="flex items-start">
                       <span className="font-medium text-gray-700 min-w-[120px]">Đơn vị mới:</span>
-                      <span className="text-blue-700 font-medium">{currentProduct.new_unit}</span>
+                      <span className={`font-medium ${
+                        currentProduct.second_check === 1 ? 'text-purple-700' : 'text-blue-700'
+                      }`}>{currentProduct.new_unit}</span>
                     </div>
                   )}
                 </>
@@ -152,7 +182,9 @@ const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({ product, onNa
               
               {/* Số lượng tồn kho */}
               {(currentProduct.stock !== null && currentProduct.stock !== undefined) && (
-                <div className="flex items-start pt-2 border-t border-gray-100">
+                <div className={`flex items-start pt-2 ${
+                  currentProduct.second_check === 1 ? 'border-t border-purple-200' : 'border-t border-gray-100'
+                }`}>
                   <span className="font-medium text-gray-700 min-w-[120px]">Tồn kho:</span>
                   <span className="text-gray-900">
                     {currentProduct.stock} {currentProduct.new_unit || currentProduct.unit}
@@ -162,19 +194,35 @@ const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({ product, onNa
               
               {/* Hình ảnh */}
               {currentProduct.images && currentProduct.images.length > 0 && (
-                <div className="pt-2 border-t border-gray-100">
-                  <span className="font-medium text-gray-700 block mb-2">Hình ảnh:</span>
+                <div className={`pt-2 ${
+                  currentProduct.second_check === 1 ? 'border-t border-purple-200' : 'border-t border-gray-100'
+                }`}>
+                  <span className="font-medium text-gray-700 block mb-2">Hình ảnh đã chụp:</span>
                   <div className="grid grid-cols-3 gap-2">
                     {currentProduct.images.map((image, index) => (
                       <div key={index} className="relative aspect-square">
                         <img 
-                          src={image} 
-                          alt={`Ảnh ${index + 1}`}
-                          className="w-full h-full object-cover rounded-lg border border-gray-200"
+                          src={`http://localhost:3001${image}`}
+                          alt={`Ảnh sản phẩm ${index + 1}`}
+                          className={`w-full h-full object-cover rounded-lg border-2 ${
+                            currentProduct.second_check === 1 ? 'border-purple-300' : 'border-blue-300'
+                          } shadow-sm cursor-pointer hover:opacity-90 transition`}
+                          onClick={() => {
+                            // Mở ảnh trong tab mới để xem full size
+                            window.open(`http://localhost:3001${image}`, '_blank');
+                          }}
+                          onError={(e) => {
+                            // Xử lý lỗi khi ảnh không tải được
+                            (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23ddd" width="100" height="100"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dominant-baseline="middle" fill="%23999" font-size="14"%3EKhông tải được%3C/text%3E%3C/svg%3E';
+                          }}
                         />
+                        <span className="absolute bottom-1 right-1 bg-black bg-opacity-50 text-white text-xs px-2 py-0.5 rounded">
+                          {index + 1}/{currentProduct.images.length}
+                        </span>
                       </div>
                     ))}
                   </div>
+                  <p className="text-xs text-gray-500 mt-1 italic">Nhấn vào ảnh để xem kích thước đầy đủ</p>
                 </div>
               )}
             </div>
@@ -184,22 +232,45 @@ const ProductDetailScreen: React.FC<ProductDetailScreenProps> = ({ product, onNa
 
       <footer className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white p-4 border-t border-gray-200 z-10">
         <div className="flex flex-col space-y-3">
-          {/* Nút kiểm tra lần 1 - Luôn cho phép check lại để chỉnh sửa */}
-          <button 
-            onClick={() => onNavigate('first-check', currentProduct.barcode)} 
-            className="w-full bg-orange-600 text-white py-3 rounded-lg font-semibold hover:bg-orange-700 transition flex items-center justify-center"
-          >
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-            </svg>
-            {currentProduct.first_check === 1 ? 'Kiểm tra lại lần 1' : 'Kiểm tra lần 1'}
-          </button>
+          {/* Nút kiểm tra lần 1 - CHỈ hiện khi CHƯA check lần 1 */}
+          {currentProduct.first_check !== 1 && (
+            <button 
+              onClick={() => onNavigate('first-check', currentProduct.barcode)} 
+              className="w-full bg-orange-600 text-white py-3 rounded-lg font-semibold hover:bg-orange-700 transition flex items-center justify-center"
+            >
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+              Kiểm tra lần 1
+            </button>
+          )}
           
-          {/* Hiển thị trạng thái */}
+          {/* Nút kiểm tra lần 2 - CHỈ hiện khi đã check lần 1 NHƯNG chưa check lần 2 */}
+          {currentProduct.first_check === 1 && currentProduct.second_check !== 1 && (
+            <button 
+              onClick={() => onNavigate('second-check', currentProduct.barcode)} 
+              className="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700 transition flex items-center justify-center"
+            >
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Kiểm tra lần 2
+            </button>
+          )}
+          
+          {/* Hiển thị trạng thái hoàn thành */}
           {currentProduct.first_check === 1 && currentProduct.second_check === 1 && (
             <div className="w-full bg-green-50 border border-green-200 p-3 rounded-lg text-center">
-              <p className="text-sm text-green-700 font-medium">✓ Đã được supervisor duyệt</p>
-              <p className="text-xs text-green-600 mt-1">Có thể check lại lần 1 nếu cần chỉnh sửa</p>
+              <p className="text-sm text-green-700 font-medium">✓ Đã hoàn thành 2 lần kiểm tra</p>
+              <p className="text-xs text-green-600 mt-1">Sản phẩm đã được kiểm tra đầy đủ</p>
+            </div>
+          )}
+          
+          {/* Hiển thị trạng thái đã check lần 1 */}
+          {currentProduct.first_check === 1 && currentProduct.second_check !== 1 && (
+            <div className="w-full bg-blue-50 border border-blue-200 p-3 rounded-lg text-center">
+              <p className="text-sm text-blue-700 font-medium">✓ Đã hoàn thành kiểm tra lần 1</p>
+              <p className="text-xs text-blue-600 mt-1">Cần kiểm tra lần 2 để hoàn tất</p>
             </div>
           )}
         </div>

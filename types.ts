@@ -21,7 +21,7 @@ export interface Product {
   images?: string[];
 }
 
-export type Screen = 'login' | 'scan' | 'detail' | 'create' | 'list' | 'first-check' | 'second-check' | 'check-dashboard';
+export type Screen = 'login' | 'scan' | 'detail' | 'create' | 'list' | 'first-check' | 'second-check';
 
 export interface ToastMessage {
   message: string;
