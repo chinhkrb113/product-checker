@@ -12,7 +12,7 @@ interface ProductListScreenProps {
 const ProductListScreen: React.FC<ProductListScreenProps> = ({ onNavigate }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'unchecked' | 'first-checked' | 'completed'>('unchecked');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'unchecked' | 'first-checked' | 'completed'>('all');
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -34,14 +34,25 @@ const ProductListScreen: React.FC<ProductListScreenProps> = ({ onNavigate }) => 
   const totalPages = Math.ceil(totalProducts / pageSize);
 
   // Fetch products từ API theo filter
-  const fetchProducts = useCallback(async (page: number, search: string = '', status: 'unchecked' | 'first-checked' | 'completed' = 'unchecked') => {
+  const fetchProducts = useCallback(async (page: number, search: string = '', status: 'all' | 'unchecked' | 'first-checked' | 'completed' = 'all') => {
     try {
       setLoading(true);
 
       const offset = (page - 1) * pageSize;
       
-      // Gọi API filter với status
-      const url = `${API_URL}/api/products/filter?status=${status}&q=${encodeURIComponent(search)}&limit=${pageSize}&offset=${offset}`;
+      // Nếu status là 'all', không truyền status parameter hoặc gọi API khác
+      let url: string;
+      if (status === 'all') {
+        // Gọi API search hoặc products (không filter status)
+        if (search.trim()) {
+          url = `${API_URL}/api/products/search?q=${encodeURIComponent(search)}&limit=${pageSize}&offset=${offset}`;
+        } else {
+          url = `${API_URL}/api/products?limit=${pageSize}&offset=${offset}`;
+        }
+      } else {
+        // Gọi API filter với status cụ thể
+        url = `${API_URL}/api/products/filter?status=${status}&q=${encodeURIComponent(search)}&limit=${pageSize}&offset=${offset}`;
+      }
 
       const response = await fetch(url);
       
@@ -157,8 +168,21 @@ const ProductListScreen: React.FC<ProductListScreenProps> = ({ onNavigate }) => 
           </div>
         </div>
 
-        {/* Filter buttons - Chỉ 3 nút, không count */}
-        <div className="grid grid-cols-3 gap-2">
+        {/* Filter buttons - 4 nút bao gồm Tất cả */}
+        <div className="grid grid-cols-4 gap-2">
+          <button
+            onClick={() => {
+              setStatusFilter('all');
+              setCurrentPage(1);
+            }}
+            className={`py-2 px-3 rounded-lg font-semibold text-sm transition ${
+              statusFilter === 'all'
+                ? 'bg-purple-600 text-white shadow-md'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Tất cả
+          </button>
           <button
             onClick={() => {
               setStatusFilter('unchecked');
@@ -183,7 +207,7 @@ const ProductListScreen: React.FC<ProductListScreenProps> = ({ onNavigate }) => 
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
-            Check lần 1
+            Check 1
           </button>
           <button
             onClick={() => {
@@ -196,7 +220,7 @@ const ProductListScreen: React.FC<ProductListScreenProps> = ({ onNavigate }) => 
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
-            Check lần 2
+            Check 2
           </button>
         </div>
       </div>
