@@ -26,8 +26,8 @@ npm run server
 
 ### 3. Truy cập ứng dụng
 - Frontend: http://localhost:3000
-- API Server: https://3gz0lzph-3001.asse.devtunnels.ms
-- Health Check: https://3gz0lzph-3001.asse.devtunnels.ms/health
+- API Server: http://localhost:3001
+- Health Check: http://localhost:3001/health
 
 ## 📊 Database Configuration
 

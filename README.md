@@ -139,7 +139,7 @@ npm run server
 Nếu kết nối thành công, bạn sẽ thấy:
 ```
 ✅ Database connected successfully
-🚀 Server running on https://3gz0lzph-3001.asse.devtunnels.ms
+🚀 Server running on http://localhost:3001
 ```
 
 ### 5. Khởi chạy ứng dụng
@@ -287,7 +287,7 @@ PORT=3001  # Thay đổi port tùy ý
 
 ### Base URL
 ```
-https://3gz0lzph-3001.asse.devtunnels.ms
+http://localhost:3001
 ```
 
 ### Endpoints
@@ -1087,7 +1087,7 @@ lsof -ti:3001 | xargs kill -9
 
 **Triệu chứng:**
 ```
-Access to fetch at 'https://3gz0lzph-3001.asse.devtunnels.ms/api/products' from origin 'http://localhost:5173' 
+Access to fetch at 'http://localhost:3001/api/products' from origin 'http://localhost:5173' 
 has been blocked by CORS policy
 ```
 
@@ -1228,7 +1228,7 @@ npm run server
 2. Kiểm tra API URL trong frontend code
 3. Test API trực tiếp bằng curl:
 ```bash
-curl https://3gz0lzph-3001.asse.devtunnels.ms/health
+curl http://localhost:3001/health
 ```
 
 4. Kiểm tra firewall không block port 3001
@@ -1280,7 +1280,7 @@ useEffect(() => {
 
 2. Kiểm tra API `/api/check-workflow/stats`:
 ```bash
-curl https://3gz0lzph-3001.asse.devtunnels.ms/api/check-workflow/stats
+curl http://localhost:3001/api/check-workflow/stats
 ```
 
 3. Clear browser cache và refresh
@@ -1338,21 +1338,21 @@ npx tsx test-db.ts
 
 ```bash
 # Health check
-curl https://3gz0lzph-3001.asse.devtunnels.ms/health
+curl http://localhost:3001/health
 
 # Login
-curl -X POST https://3gz0lzph-3001.asse.devtunnels.ms/api/login \
+curl -X POST http://localhost:3001/api/login \
   -H "Content-Type: application/json" \
   -d '{"username":"EMP-00001"}'
 
 # Get stats
-curl https://3gz0lzph-3001.asse.devtunnels.ms/api/check-workflow/stats
+curl http://localhost:3001/api/check-workflow/stats
 
 # Get pending first check
-curl https://3gz0lzph-3001.asse.devtunnels.ms/api/products/pending-first-check?limit=10
+curl http://localhost:3001/api/products/pending-first-check?limit=10
 
 # Get pending second check
-curl https://3gz0lzph-3001.asse.devtunnels.ms/api/products/pending-second-check?limit=10
+curl http://localhost:3001/api/products/pending-second-check?limit=10
 ```
 
 ## 🤝 Contributing

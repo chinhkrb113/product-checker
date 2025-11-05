@@ -109,8 +109,8 @@ app.get('/api/products', async (req, res) => {
 3. **Test API pagination:**
    ```bash
    # Test với curl hoặc Postman
-   curl "https://3gz0lzph-3001.asse.devtunnels.ms/api/products?limit=10&offset=0"
-   curl "https://3gz0lzph-3001.asse.devtunnels.ms/api/products?limit=10&offset=10"
+   curl "http://localhost:3001/api/products?limit=10&offset=0"
+   curl "http://localhost:3001/api/products?limit=10&offset=10"
    ```
 
 ## Cấu trúc luồng mới
@@ -147,7 +147,7 @@ Lặp lại...
 
 ### Constants
 ```typescript
-const API_URL = 'https://3gz0lzph-3001.asse.devtunnels.ms';
+const API_URL = 'http://localhost:3001';
 const PAGE_SIZE = 50; // Có thể điều chỉnh
 ```
 

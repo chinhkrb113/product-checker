@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Product, Screen, User } from '../types';
 import { CameraIcon, ListIcon } from './icons';
 
-const API_URL = 'https://3gz0lzph-3001.asse.devtunnels.ms';
+const API_URL = 'http://localhost:3001';
 
 interface ScanScreenProps {
   onNavigate: (screen: Screen, barcode?: string) => void;

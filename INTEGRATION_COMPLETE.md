@@ -53,9 +53,9 @@ npm run dev
 ## 🌐 URLs
 
 - **Frontend**: http://localhost:3000
-- **API Server**: https://3gz0lzph-3001.asse.devtunnels.ms
-- **Health Check**: https://3gz0lzph-3001.asse.devtunnels.ms/health
-- **Test API**: https://3gz0lzph-3001.asse.devtunnels.ms/api/products
+- **API Server**: http://localhost:3001
+- **Health Check**: http://localhost:3001/health
+- **Test API**: http://localhost:3001/api/products
 
 ## 📊 Database Schema
 
@@ -155,13 +155,13 @@ Frontend (Display)
 ### Test API Server:
 ```bash
 # Health check
-curl https://3gz0lzph-3001.asse.devtunnels.ms/health
+curl http://localhost:3001/health
 
 # Get all products
-curl https://3gz0lzph-3001.asse.devtunnels.ms/api/products
+curl http://localhost:3001/api/products
 
 # Get product by barcode
-curl https://3gz0lzph-3001.asse.devtunnels.ms/api/products/8934563123456
+curl http://localhost:3001/api/products/8934563123456
 ```
 
 ### Expected Response:
@@ -224,7 +224,7 @@ Error: listen EADDRINUSE: address already in use :::3001
 
 ### CORS errors:
 ```
-Access to fetch at 'https://3gz0lzph-3001.asse.devtunnels.ms' blocked by CORS policy
+Access to fetch at 'http://localhost:3001' blocked by CORS policy
 ```
 → Đã configure CORS trong server
 → Nếu vẫn lỗi, restart server

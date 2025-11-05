@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Product, Screen, User } from '../types';
 import { BackIcon, CheckIcon, SearchIcon } from './icons';
 
-const API_URL = 'https://3gz0lzph-3001.asse.devtunnels.ms';
+const API_URL = 'http://localhost:3001';
 
 interface SecondCheckScreenProps {
   user: User;

@@ -10,7 +10,7 @@ import SecondCheckScreen from './components/SecondCheckScreen';
 import CheckDashboard from './components/CheckDashboard';
 import Toast from './components/Toast';
 
-const API_URL = 'https://3gz0lzph-3001.asse.devtunnels.ms/api';
+const API_URL = 'http://localhost:3001/api';
 
 const App: React.FC = () => {
   const [screen, setScreen] = useState<Screen>('login');

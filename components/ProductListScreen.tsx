@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Product, Screen } from '../types';
 import { BackIcon, SearchIcon } from './icons';
 
-const API_URL = 'https://3gz0lzph-3001.asse.devtunnels.ms';
+const API_URL = 'http://localhost:3001';
 
 interface ProductListScreenProps {
   onNavigate: (screen: Screen, barcode?: string) => void;

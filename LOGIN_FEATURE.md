@@ -298,7 +298,7 @@ LIMIT 5;
 
 ```bash
 # Test với username hợp lệ
-curl -X POST https://3gz0lzph-3001.asse.devtunnels.ms/api/login \
+curl -X POST http://localhost:3001/api/login \
   -H "Content-Type: application/json" \
   -d '{"username":"EMP-001"}'
 
@@ -306,7 +306,7 @@ curl -X POST https://3gz0lzph-3001.asse.devtunnels.ms/api/login \
 # {"success":true,"username":"EMP-001","employeeName":"Nguyễn Văn A"}
 
 # Test với username không hợp lệ
-curl -X POST https://3gz0lzph-3001.asse.devtunnels.ms/api/login \
+curl -X POST http://localhost:3001/api/login \
   -H "Content-Type: application/json" \
   -d '{"username":"INVALID"}'
 
